@@ -1,0 +1,400 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Hostel Meal Management{% endblock %}</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body {
+            background-color: #f8fafc;
+        }
+        /* Active link styles */
+        .nav-link {
+            padding: 0.5rem 1rem;
+            border-radius: 0.5rem;
+            transition: all 0.2s;
+            font-weight: 500;
+        }
+        .nav-link:hover {
+            background-color: #f3f4f6;
+        }
+        .nav-link.active {
+            background-color: #dbeafe;
+            color: #1d4ed8;
+            font-weight: 600;
+        }
+        /* Hamburger menu styles */
+        .dropdown-menu {
+            display: none;
+            position: absolute;
+            right: 0;
+            top: 100%;
+            margin-top: 0.5rem;
+            background-color: white;
+            border-radius: 0.75rem;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.15);
+            min-width: 220px;
+            padding: 0.5rem;
+            z-index: 1000;
+            border: 1px solid #e5e7eb;
+        }
+        .dropdown-menu.show {
+            display: block;
+        }
+        .dropdown-item {
+            display: flex;
+            align-items: center;
+            padding: 0.65rem 1rem;
+            color: #374151;
+            text-decoration: none;
+            border-radius: 0.5rem;
+            transition: all 0.15s;
+            font-size: 0.9rem;
+            cursor: pointer;
+            border: none;
+            background: none;
+            width: 100%;
+            text-align: left;
+        }
+        .dropdown-item:hover {
+            background-color: #f3f4f6;
+        }
+        .dropdown-item .icon {
+            margin-right: 0.75rem;
+            font-size: 1.1rem;
+        }
+        .dropdown-divider {
+            border-top: 1px solid #e5e7eb;
+            margin: 0.3rem 0.5rem;
+        }
+        .hamburger-btn {
+            background: none;
+            border: none;
+            font-size: 1.8rem;
+            cursor: pointer;
+            padding: 0.25rem 0.5rem;
+            border-radius: 0.5rem;
+            transition: background 0.2s;
+            color: #374151;
+            line-height: 1;
+        }
+        .hamburger-btn:hover {
+            background-color: #f3f4f6;
+        }
+    </style>
+</head>
+<body class="bg-gray-50">
+    <!-- Navigation Bar -->
+    {% if current_user %}
+    <nav class="bg-white shadow-sm border-b border-gray-200">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between items-center h-16">
+                <div class="flex items-center">
+                    <h1 class="text-2xl font-bold text-blue-600">🏠 Hostel Meals</h1>
+                </div>
+                <div class="flex items-center space-x-4">
+                    <span class="text-sm text-gray-600 hidden sm:inline">
+                        Welcome, <strong>{{ current_user.name }}</strong>
+                        {% if current_user.is_manager() %}<span class="ml-2 px-3 py-1 bg-amber-100 text-amber-800 rounded-full text-xs font-semibold">Manager</span>{% endif %}
+                    </span>
+                    
+                    <!-- Nav Links (visible on desktop) -->
+                    <div class="hidden md:flex items-center space-x-2">
+                        {% if current_user.is_manager() %}
+                        <a href="{{ url_for('dashboard') }}" class="nav-link {% if request.endpoint == 'dashboard' %}active{% endif %}">Dashboard</a>
+                        <a href="{{ url_for('manager_panel') }}" class="nav-link {% if request.endpoint == 'manager_panel' %}active{% endif %}">Manager Panel</a>
+                        {% endif %}
+                    </div>
+
+                    <!-- Hamburger Menu Button -->
+                    <div class="relative">
+                        <button onclick="toggleDropdown()" class="hamburger-btn" aria-label="Menu">
+                            ☰
+                        </button>
+                        
+                        <!-- Dropdown Menu -->
+                        <div id="dropdownMenu" class="dropdown-menu">
+                            <!-- User info on mobile -->
+                            <div class="px-4 py-2 border-b border-gray-100 md:hidden">
+                                <div class="font-semibold text-gray-800">{{ current_user.name }}</div>
+                                <div class="text-xs text-gray-500">
+                                    {% if current_user.is_manager() %}👑 Manager{% else %}👤 Member{% endif %}
+                                </div>
+                            </div>
+                            
+                            <!-- Dashboard link (mobile) -->
+                            <a href="{{ url_for('dashboard') }}" class="dropdown-item md:hidden">
+                                <span class="icon">📊</span> Dashboard
+                            </a>
+                            
+                            {% if current_user.is_manager() %}
+                            <!-- Manager Panel link (mobile) -->
+                            <a href="{{ url_for('manager_panel') }}" class="dropdown-item md:hidden">
+                                <span class="icon">⚙️</span> Manager Panel
+                            </a>
+                            
+                            <div class="dropdown-divider"></div>
+                            
+                            <!-- Transfer Manager Role -->
+                            <button onclick="openTransferModal()" class="dropdown-item">
+                                <span class="icon">🔄</span> Transfer Manager Role
+                            </button>
+                            
+                            <!-- Transaction History -->
+                            <button onclick="openTransactionHistory()" class="dropdown-item">
+                                <span class="icon">📜</span> Credit/Debit History
+                            </button>
+                            {% endif %}
+                            
+                            <div class="dropdown-divider"></div>
+                            
+                            <!-- Logout -->
+                            <a href="{{ url_for('logout') }}" class="dropdown-item text-red-600 hover:bg-red-50">
+                                <span class="icon">🚪</span> Logout
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </nav>
+    {% endif %}
+
+    <!-- Flash Messages -->
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-4">
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                {% for category, message in messages %}
+                <div class="mb-4 p-4 rounded-lg {% if category == 'danger' %}bg-red-100 text-red-800{% elif category == 'success' %}bg-green-100 text-green-800{% elif category == 'warning' %}bg-yellow-100 text-yellow-800{% else %}bg-blue-100 text-blue-800{% endif %}">
+                    {{ message }}
+                </div>
+                {% endfor %}
+            {% endif %}
+        {% endwith %}
+    </div>
+
+    <!-- ========== TRANSFER MANAGER MODAL ========== -->
+    <div id="transferModal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+        <div class="bg-white rounded-lg shadow-lg p-8 max-w-md w-full">
+            <h2 class="text-2xl font-bold text-gray-800 mb-4">🔄 Transfer Manager Role</h2>
+            <p class="text-sm text-gray-600 mb-4">
+                Transfer manager permissions to another member. After transfer, you will become a regular member.
+            </p>
+            
+            <div class="space-y-4">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Select New Manager</label>
+                    <select id="newManagerSelect" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-amber-500 bg-white">
+                        <option value="">-- Select a member --</option>
+                        {% for user in potential_managers %}
+                        <option value="{{ user.id }}">{{ user.name }} ({{ user.email }})</option>
+                        {% endfor %}
+                        {% if potential_managers|length == 0 %}
+                        <option value="" disabled>No members available</option>
+                        {% endif %}
+                    </select>
+                </div>
+                
+                <div id="transferMessage" class="hidden"></div>
+                
+                <div class="flex gap-4">
+                    <button onclick="transferManagerRole()" class="flex-1 px-4 py-2 bg-amber-600 text-white rounded-lg hover:bg-amber-700 font-semibold">
+                        Transfer Role
+                    </button>
+                    <button onclick="closeTransferModal()" class="flex-1 px-4 py-2 bg-gray-300 text-gray-700 rounded-lg hover:bg-gray-400 font-semibold">
+                        Cancel
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ========== TRANSACTION HISTORY MODAL ========== -->
+    <div id="transactionModal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+        <div class="bg-white rounded-lg shadow-lg p-8 max-w-2xl w-full max-h-[80vh] overflow-hidden">
+            <div class="flex justify-between items-center mb-4">
+                <h2 class="text-2xl font-bold text-gray-800">📜 Credit/Debit History</h2>
+                <button onclick="closeTransactionModal()" class="text-gray-500 hover:text-gray-700 text-2xl">&times;</button>
+            </div>
+            
+            <div class="overflow-y-auto max-h-[60vh]">
+                <div id="transactionHistoryList" class="space-y-2">
+                    <div class="text-gray-500 text-sm">Loading transactions...</div>
+                </div>
+            </div>
+            
+            <div class="mt-4 flex justify-end">
+                <button onclick="closeTransactionModal()" class="px-4 py-2 bg-gray-300 text-gray-700 rounded-lg hover:bg-gray-400 font-semibold">
+                    Close
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Main Content -->
+    <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        {% block content %}{% endblock %}
+    </main>
+
+    <!-- Footer -->
+    <footer class="bg-white border-t border-gray-200 mt-12">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+            <div class="text-center text-gray-600 text-sm">
+                <p>&copy; 2026 Hostel Meal Management System. All rights reserved.</p>
+            </div>
+        </div>
+    </footer>
+
+    {% block scripts %}{% endblock %}
+    
+    <!-- Global JavaScript -->
+    <script>
+        // Toggle dropdown menu
+        function toggleDropdown() {
+            const menu = document.getElementById('dropdownMenu');
+            menu.classList.toggle('show');
+        }
+
+        // Close dropdown when clicking outside
+        document.addEventListener('click', function(event) {
+            const menu = document.getElementById('dropdownMenu');
+            const btn = document.querySelector('.hamburger-btn');
+            if (!btn.contains(event.target) && !menu.contains(event.target)) {
+                menu.classList.remove('show');
+            }
+        });
+
+        // Transfer Manager Functions
+        function openTransferModal() {
+            document.getElementById('transferModal').classList.remove('hidden');
+            document.getElementById('dropdownMenu').classList.remove('show');
+        }
+
+        function closeTransferModal() {
+            document.getElementById('transferModal').classList.add('hidden');
+            document.getElementById('transferMessage').classList.add('hidden');
+        }
+
+        function transferManagerRole() {
+            const select = document.getElementById('newManagerSelect');
+            const userId = select.value;
+            const messageDiv = document.getElementById('transferMessage');
+
+            if (!userId) {
+                messageDiv.className = 'mt-3 p-3 bg-red-100 text-red-800 rounded-lg';
+                messageDiv.textContent = '⚠️ Please select a member to transfer the manager role.';
+                messageDiv.classList.remove('hidden');
+                return;
+            }
+
+            const memberName = select.options[select.selectedIndex].text;
+            
+            if (!confirm(`⚠️ Are you sure you want to transfer the Manager role to "${memberName}"?\n\nYou will be logged out and become a regular member.`)) {
+                return;
+            }
+
+            fetch('/api/transfer-manager', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    new_manager_id: parseInt(userId)
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    messageDiv.className = 'mt-3 p-3 bg-green-100 text-green-800 rounded-lg';
+                    messageDiv.textContent = '✅ ' + data.message;
+                    messageDiv.classList.remove('hidden');
+                    
+                    setTimeout(() => {
+                        window.location.href = '/login';
+                    }, 2000);
+                } else {
+                    messageDiv.className = 'mt-3 p-3 bg-red-100 text-red-800 rounded-lg';
+                    messageDiv.textContent = '❌ Error: ' + data.message;
+                    messageDiv.classList.remove('hidden');
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                messageDiv.className = 'mt-3 p-3 bg-red-100 text-red-800 rounded-lg';
+                messageDiv.textContent = '❌ An error occurred while transferring role.';
+                messageDiv.classList.remove('hidden');
+            });
+        }
+
+        // Transaction History Functions
+        function openTransactionHistory() {
+            document.getElementById('transactionModal').classList.remove('hidden');
+            document.getElementById('dropdownMenu').classList.remove('show');
+            loadTransactionHistory();
+        }
+
+        function closeTransactionModal() {
+            document.getElementById('transactionModal').classList.add('hidden');
+        }
+
+        function loadTransactionHistory() {
+            const list = document.getElementById('transactionHistoryList');
+            
+            fetch('/api/get-all-transactions')
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success && data.transactions.length > 0) {
+                        let html = '';
+                        data.transactions.forEach(trans => {
+                            const isDeposit = trans.type === 'deposit';
+                            html += `
+                                <div class="flex justify-between items-center py-2 border-b border-gray-200 hover:bg-gray-50 px-2 rounded">
+                                    <div>
+                                        <div class="font-medium text-gray-800">${trans.user_name}</div>
+                                        <div class="text-sm text-gray-500">${trans.date}</div>
+                                        ${trans.description ? `<div class="text-xs text-gray-400">${trans.description}</div>` : ''}
+                                    </div>
+                                    <div class="text-right">
+                                        <div class="font-semibold ${isDeposit ? 'text-green-600' : 'text-red-600'}">
+                                            ${isDeposit ? '+' : '-'}৳${parseFloat(trans.amount).toFixed(2)}
+                                        </div>
+                                        <div class="text-xs text-gray-400">${trans.type}</div>
+                                    </div>
+                                </div>
+                            `;
+                        });
+                        list.innerHTML = html;
+                    } else {
+                        list.innerHTML = `
+                            <div class="text-gray-500 text-sm py-4 text-center">
+                                No transactions found.
+                            </div>
+                        `;
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    list.innerHTML = `
+                        <div class="text-red-500 text-sm py-4 text-center">
+                            Error loading transactions. Please try again.
+                        </div>
+                    `;
+                });
+        }
+
+        // Close modals when clicking outside
+        document.getElementById('transferModal').addEventListener('click', function(e) {
+            if (e.target === this) {
+                closeTransferModal();
+            }
+        });
+
+        document.getElementById('transactionModal').addEventListener('click', function(e) {
+            if (e.target === this) {
+                closeTransactionModal();
+            }
+        });
+    </script>
+</body>
+</html>
