@@ -97,13 +97,13 @@ pip install -r requirements.txt
 python app.py
 ```
 
-The application will start at `http://localhost:5000`
+The application will start at `http://localhost:5900`
 
 ## First Time Setup
 
 ### Create Demo Accounts
 
-1. **Go to Registration Page**: http://localhost:5000/register
+1. **Go to Registration Page**: http://localhost:5900/register
 
 2. **Create a Manager Account**:
    - Name: Manager User
@@ -254,10 +254,10 @@ pip install -r requirements.txt
 ### Issue: "sqlite3.OperationalError: database is locked"
 **Solution**: This is normal. Close other connections or wait a moment before retrying.
 
-### Issue: Port 5000 already in use
+### Issue: Port 5900 already in use
 **Solution**: Change the port in app.py
 ```python
-app.run(debug=True, host='0.0.0.0', port=5001)  # Use port 5001
+app.run(debug=True, host='0.0.0.0', port=5901)  # Use port 5901
 ```
 
 ## Future Enhancements
