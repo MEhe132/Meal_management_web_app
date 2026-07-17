@@ -1,0 +1,247 @@
+{% extends "base.html" %}
+
+{% block title %}Meal Status - Plate &amp; Spoon{% endblock %}
+
+{% block content %}
+<div class="space-y-6">
+    <!-- Header -->
+    <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div>
+            <h1 class="text-2xl md:text-3xl font-extrabold text-slate-900 dark:text-slate-50 tracking-tight">Meal Status</h1>
+            <p class="text-slate-500 dark:text-slate-400 text-sm mt-1">
+                Toggle your breakfast (0.5), lunch (1.0), and dinner (1.0) status.
+            </p>
+        </div>
+        
+        <!-- Manager Target User Selector -->
+        {% if current_user.is_manager() %}
+        <div class="flex items-center space-x-3 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-2.5 rounded-xl shadow-sm self-start">
+            <span class="text-xs font-bold text-slate-500 uppercase tracking-wider">Viewing member:</span>
+            <select onchange="window.location.href='?user_id=' + this.value" class="px-3 py-1.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-sm font-semibold focus:outline-none focus:ring-2 focus:ring-indigo-500 text-slate-900 dark:text-slate-100">
+                {% for u in all_users %}
+                <option value="{{ u.id }}" {% if target_user.id == u.id %}selected{% endif %}>{{ u.name }} ({% if u.is_manager() %}Manager{% else %}Member{% endif %})</option>
+                {% endfor %}
+            </select>
+        </div>
+        {% endif %}
+    </div>
+
+    <!-- Alert about status editing policy -->
+    <div class="p-4 bg-indigo-50/50 border border-indigo-100/60 dark:bg-indigo-950/20 dark:border-indigo-900/40 text-indigo-850 dark:text-indigo-300 rounded-2xl flex items-start space-x-3">
+        <span class="text-lg">ℹ️</span>
+        <div class="text-xs font-medium space-y-1">
+            <p class="font-bold">Meal Calculations Policy:</p>
+            <p>• Breakfast is computed at <strong>0.5 meal</strong>. Lunch and Dinner are computed at <strong>1.0 meal</strong> each.</p>
+            <p>• Lock Status: Once the Chef arrives, the Manager will lock editing for that meal slot. Locked statuses cannot be changed by members or managers.</p>
+        </div>
+    </div>
+
+    <!-- Main Table Layout -->
+    <div class="bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 rounded-2xl shadow-sm overflow-hidden">
+        <div class="px-6 py-5 border-b border-slate-100 dark:border-slate-800 flex justify-between items-center flex-wrap gap-2">
+            <h2 class="text-base font-bold text-slate-800 dark:text-slate-200">
+                Meal Schedule for <span class="text-indigo-600 dark:text-indigo-400 font-extrabold">{{ target_user.name }}</span>
+            </h2>
+            <span class="text-[10px] bg-slate-100 dark:bg-slate-800 text-slate-650 dark:text-slate-350 px-2.5 py-1 rounded-full font-bold uppercase">7-Day Planner</span>
+        </div>
+
+        <div class="overflow-x-auto">
+            <table class="w-full text-left text-sm">
+                <thead>
+                    <tr class="bg-slate-50/70 dark:bg-slate-800/50 border-b border-slate-100 dark:border-slate-800 text-slate-500 dark:text-slate-400">
+                        <th class="px-6 py-4 font-bold uppercase tracking-wider text-xs">Date</th>
+                        <th class="px-6 py-4 font-bold uppercase tracking-wider text-xs text-center">Breakfast (0.5)</th>
+                        <th class="px-6 py-4 font-bold uppercase tracking-wider text-xs text-center">Lunch (1.0)</th>
+                        <th class="px-6 py-4 font-bold uppercase tracking-wider text-xs text-center">Dinner (1.0)</th>
+                        <th class="px-6 py-4 font-bold uppercase tracking-wider text-xs text-center">Total Daily Meals</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-slate-100 dark:divide-slate-800">
+                    {% for d in dates_range %}
+                    {% set m_entry = meals_by_date.get(d) %}
+                    {% set b_checked = m_entry.breakfast if m_entry else False %}
+                    {% set l_checked = m_entry.lunch if m_entry else False %}
+                    {% set d_checked = m_entry.dinner if m_entry else False %}
+                    
+                    {% set lock_entry = locks_by_date.get(d) %}
+                    {% set b_locked = lock_entry.breakfast_locked if lock_entry else False %}
+                    {% set l_locked = lock_entry.lunch_locked if lock_entry else False %}
+                    {% set d_locked = lock_entry.dinner_locked if lock_entry else False %}
+                    
+                    <tr class="hover:bg-slate-50/50 dark:hover:bg-slate-800/30 transition duration-150">
+                        <td class="px-6 py-5 font-semibold text-slate-900 dark:text-slate-100 whitespace-nowrap">
+                            {% if d == today %}
+                            <span class="px-2 py-0.5 bg-green-50 dark:bg-green-950/40 text-green-700 dark:text-green-400 border border-green-200/50 dark:border-green-900/50 rounded-lg text-xs font-bold mr-2">Today</span>
+                            {% endif %}
+                            {{ d.strftime('%a, %b %d') }}
+                        </td>
+                        
+                        <!-- Breakfast Checkbox -->
+                        <td class="px-6 py-5">
+                            <div class="flex flex-col items-center justify-center space-y-2">
+                                <label class="inline-flex items-center cursor-pointer {% if b_locked %}cursor-not-allowed opacity-60{% endif %}">
+                                    <input type="checkbox" 
+                                           onchange="toggleMeal('{{ target_user.id }}', '{{ d.strftime('%Y-%m-%d') }}', 'breakfast', this)"
+                                           {% if b_checked %}checked{% endif %}
+                                           {% if b_locked %}disabled{% endif %}
+                                           class="w-5 h-5 text-indigo-600 bg-slate-100 dark:bg-slate-850 border-slate-350 dark:border-slate-700 rounded-lg focus:ring-indigo-500 focus:ring-offset-0 transition duration-150">
+                                </label>
+                                {% if b_locked %}
+                                <span class="text-[9px] uppercase tracking-wider font-extrabold text-red-500 dark:text-red-400 flex items-center space-x-1">
+                                    <span>🔒 Locked</span>
+                                </span>
+                                {% else %}
+                                <span class="text-[9px] uppercase tracking-wider font-semibold text-slate-400 dark:text-slate-550">Open</span>
+                                {% endif %}
+                                
+                                <!-- Manager Lock Toggle Button -->
+                                {% if current_user.is_manager() %}
+                                <button onclick="toggleLock('{{ d.strftime('%Y-%m-%d') }}', 'breakfast', {{ 'false' if b_locked else 'true' }}, this)"
+                                        class="mt-1 px-2 py-0.5 text-[9px] font-bold rounded transition border {% if b_locked %}bg-red-50 text-red-700 border-red-200 dark:bg-red-950/20 dark:text-red-400 dark:border-red-900/40{% else %}bg-slate-50 text-slate-650 border-slate-200 hover:bg-slate-100 dark:bg-slate-800 dark:text-slate-300 dark:border-slate-700 dark:hover:bg-slate-700{% endif %}">
+                                    {% if b_locked %}🔓 Unlock{% else %}🔒 Lock{% endif %}
+                                </button>
+                                {% endif %}
+                            </div>
+                        </td>
+
+                        <!-- Lunch Checkbox -->
+                        <td class="px-6 py-5">
+                            <div class="flex flex-col items-center justify-center space-y-2">
+                                <label class="inline-flex items-center cursor-pointer {% if l_locked %}cursor-not-allowed opacity-60{% endif %}">
+                                    <input type="checkbox" 
+                                           onchange="toggleMeal('{{ target_user.id }}', '{{ d.strftime('%Y-%m-%d') }}', 'lunch', this)"
+                                           {% if l_checked %}checked{% endif %}
+                                           {% if l_locked %}disabled{% endif %}
+                                           class="w-5 h-5 text-indigo-600 bg-slate-100 dark:bg-slate-850 border-slate-350 dark:border-slate-700 rounded-lg focus:ring-indigo-500 focus:ring-offset-0 transition duration-150">
+                                </label>
+                                {% if l_locked %}
+                                <span class="text-[9px] uppercase tracking-wider font-extrabold text-red-500 dark:text-red-400 flex items-center space-x-1">
+                                    <span>🔒 Locked</span>
+                                </span>
+                                {% else %}
+                                <span class="text-[9px] uppercase tracking-wider font-semibold text-slate-400 dark:text-slate-550">Open</span>
+                                {% endif %}
+                                
+                                <!-- Manager Lock Toggle Button -->
+                                {% if current_user.is_manager() %}
+                                <button onclick="toggleLock('{{ d.strftime('%Y-%m-%d') }}', 'lunch', {{ 'false' if l_locked else 'true' }}, this)"
+                                        class="mt-1 px-2 py-0.5 text-[9px] font-bold rounded transition border {% if l_locked %}bg-red-50 text-red-700 border-red-200 dark:bg-red-950/20 dark:text-red-400 dark:border-red-900/40{% else %}bg-slate-50 text-slate-650 border-slate-200 hover:bg-slate-100 dark:bg-slate-800 dark:text-slate-300 dark:border-slate-700 dark:hover:bg-slate-700{% endif %}">
+                                    {% if l_locked %}🔓 Unlock{% else %}🔒 Lock{% endif %}
+                                </button>
+                                {% endif %}
+                            </div>
+                        </td>
+
+                        <!-- Dinner Checkbox -->
+                        <td class="px-6 py-5">
+                            <div class="flex flex-col items-center justify-center space-y-2">
+                                <label class="inline-flex items-center cursor-pointer {% if d_locked %}cursor-not-allowed opacity-60{% endif %}">
+                                    <input type="checkbox" 
+                                           onchange="toggleMeal('{{ target_user.id }}', '{{ d.strftime('%Y-%m-%d') }}', 'dinner', this)"
+                                           {% if d_checked %}checked{% endif %}
+                                           {% if d_locked %}disabled{% endif %}
+                                           class="w-5 h-5 text-indigo-600 bg-slate-100 dark:bg-slate-850 border-slate-350 dark:border-slate-700 rounded-lg focus:ring-indigo-500 focus:ring-offset-0 transition duration-150">
+                                </label>
+                                {% if d_locked %}
+                                <span class="text-[9px] uppercase tracking-wider font-extrabold text-red-500 dark:text-red-400 flex items-center space-x-1">
+                                    <span>🔒 Locked</span>
+                                </span>
+                                {% else %}
+                                <span class="text-[9px] uppercase tracking-wider font-semibold text-slate-400 dark:text-slate-550">Open</span>
+                                {% endif %}
+                                
+                                <!-- Manager Lock Toggle Button -->
+                                {% if current_user.is_manager() %}
+                                <button onclick="toggleLock('{{ d.strftime('%Y-%m-%d') }}', 'dinner', {{ 'false' if d_locked else 'true' }}, this)"
+                                        class="mt-1 px-2 py-0.5 text-[9px] font-bold rounded transition border {% if d_locked %}bg-red-50 text-red-700 border-red-200 dark:bg-red-950/20 dark:text-red-400 dark:border-red-900/40{% else %}bg-slate-50 text-slate-650 border-slate-200 hover:bg-slate-100 dark:bg-slate-800 dark:text-slate-300 dark:border-slate-700 dark:hover:bg-slate-700{% endif %}">
+                                    {% if d_locked %}🔓 Unlock{% else %}🔒 Lock{% endif %}
+                                </button>
+                                {% endif %}
+                            </div>
+                        </td>
+
+                        <!-- Total count display -->
+                        <td class="px-6 py-5 text-center font-bold text-indigo-600 dark:text-indigo-400 whitespace-nowrap text-base" id="total_{{ d.strftime('%Y-%m-%d') }}">
+                            {{ "%.1f"|format(m_entry.meal_count if m_entry else 0.0) }}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    // Toggle meal status checkboxes
+    function toggleMeal(userId, dateStr, mealType, checkbox) {
+        const checked = checkbox.checked;
+        const totalCell = document.getElementById('total_' + dateStr);
+
+        fetch('/api/toggle-meal-status', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                user_id: parseInt(userId),
+                date: dateStr,
+                meal_type: mealType,
+                checked: checked
+            })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                // Update total daily meals count cell dynamically
+                if (totalCell) {
+                    totalCell.textContent = parseFloat(data.meal_count).toFixed(1);
+                }
+            } else {
+                // Revert checkbox state on failure
+                checkbox.checked = !checked;
+                alert('❌ Error: ' + data.message);
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            checkbox.checked = !checked;
+            alert('❌ An error occurred while updating status.');
+        });
+    }
+
+    // Toggle manager lock
+    function toggleLock(dateStr, mealType, shouldLock, button) {
+        if (!confirm(`Are you sure you want to ${shouldLock ? 'LOCK' : 'UNLOCK'} ${mealType} editing permissions for ${dateStr}?`)) {
+            return;
+        }
+
+        fetch('/api/toggle-meal-lock', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                date: dateStr,
+                meal_type: mealType,
+                locked: shouldLock
+            })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                // Reload page to reflect updated lock states and disable inputs
+                window.location.reload();
+            } else {
+                alert('❌ Error: ' + data.message);
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('❌ An error occurred while changing lock status.');
+        });
+    }
+</script>
+{% endblock %}

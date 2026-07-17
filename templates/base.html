@@ -1,54 +1,129 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" class="scroll-smooth">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{% block title %}Hostel Meal Management{% endblock %}</title>
+    
+    <!-- Favicon (Plate & Spoon) -->
+    <link rel="icon" type="image/svg+xml" href="{{ url_for('static', filename='favicon.svg') }}">
+    
+    <!-- Google Fonts (Plus Jakarta Sans) -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    
+    <!-- Tailwind CSS (CDN) -->
     <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- Tailwind Configuration and Dark Mode Initialization -->
+    <script>
+        // Inline script to prevent theme flickering on load
+        if (localStorage.getItem('theme') === 'dark' || (!('theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+            document.documentElement.classList.add('dark');
+        } else {
+            document.documentElement.classList.remove('dark');
+        }
+
+        // Tailwind Config
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['"Plus Jakarta Sans"', 'sans-serif'],
+                    },
+                    boxShadow: {
+                        'premium': '0 10px 30px -10px rgba(0, 0, 0, 0.08), 0 1px 3px rgba(0, 0, 0, 0.02)',
+                        'premium-dark': '0 10px 30px -10px rgba(0, 0, 0, 0.37), 0 1px 3px rgba(0, 0, 0, 0.1)',
+                    }
+                }
+            }
+        }
+    </script>
+    
     <style>
         body {
-            background-color: #f8fafc;
+            font-family: "Plus Jakarta Sans", sans-serif;
         }
-        /* Active link styles */
+
+        /* Glassmorphism custom components */
+        .glass-nav {
+            background: rgba(255, 255, 255, 0.75);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+        }
+        .dark .glass-nav {
+            background: rgba(15, 23, 42, 0.85);
+        }
+
+        /* Active navigation links */
         .nav-link {
             padding: 0.5rem 1rem;
-            border-radius: 0.5rem;
-            transition: all 0.2s;
+            border-radius: 0.75rem;
+            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
             font-weight: 500;
+            font-size: 0.925rem;
         }
+
         .nav-link:hover {
-            background-color: #f3f4f6;
+            background-color: rgba(243, 244, 246, 0.8);
+            transform: translateY(-1px);
         }
+        
+        .dark .nav-link:hover {
+            background-color: rgba(30, 41, 59, 0.8);
+        }
+
         .nav-link.active {
             background-color: #dbeafe;
             color: #1d4ed8;
             font-weight: 600;
         }
+
+        .dark .nav-link.active {
+            background-color: #1e3a8a;
+            color: #60a5fa;
+        }
+
         /* Hamburger menu styles */
         .dropdown-menu {
             display: none;
             position: absolute;
             right: 0;
-            top: 100%;
-            margin-top: 0.5rem;
+            top: 120%;
             background-color: white;
-            border-radius: 0.75rem;
-            box-shadow: 0 10px 25px rgba(0,0,0,0.15);
-            min-width: 220px;
+            border-radius: 1rem;
+            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+            min-width: 240px;
             padding: 0.5rem;
             z-index: 1000;
-            border: 1px solid #e5e7eb;
+            border: 1px solid rgba(229, 231, 235, 0.7);
+            transform: translateY(-10px);
+            opacity: 0;
+            transition: transform 0.2s, opacity 0.2s;
         }
+
+        .dark .dropdown-menu {
+            background-color: #1e293b;
+            border-color: rgba(51, 65, 85, 0.7);
+            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.3), 0 10px 10px -5px rgba(0, 0, 0, 0.2);
+        }
+
         .dropdown-menu.show {
             display: block;
+            transform: translateY(0);
+            opacity: 1;
         }
+
         .dropdown-item {
             display: flex;
             align-items: center;
-            padding: 0.65rem 1rem;
-            color: #374151;
+            padding: 0.75rem 1rem;
+            color: #334155;
             text-decoration: none;
-            border-radius: 0.5rem;
+            border-radius: 0.75rem;
             transition: all 0.15s;
             font-size: 0.9rem;
             cursor: pointer;
@@ -56,136 +131,312 @@
             background: none;
             width: 100%;
             text-align: left;
+            font-weight: 500;
         }
+
+        .dark .dropdown-item {
+            color: #cbd5e1;
+        }
+
         .dropdown-item:hover {
-            background-color: #f3f4f6;
+            background-color: #f1f5f9;
+            color: #1e293b;
         }
+
+        .dark .dropdown-item:hover {
+            background-color: #334155;
+            color: #f8fafc;
+        }
+
         .dropdown-item .icon {
             margin-right: 0.75rem;
-            font-size: 1.1rem;
+            font-size: 1.15rem;
         }
+
         .dropdown-divider {
-            border-top: 1px solid #e5e7eb;
-            margin: 0.3rem 0.5rem;
+            border-top: 1px solid rgba(229, 231, 235, 0.7);
+            margin: 0.4rem 0.5rem;
         }
+
+        .dark .dropdown-divider {
+            border-top-color: rgba(51, 65, 85, 0.7);
+        }
+
         .hamburger-btn {
             background: none;
             border: none;
-            font-size: 1.8rem;
+            font-size: 1.5rem;
             cursor: pointer;
-            padding: 0.25rem 0.5rem;
-            border-radius: 0.5rem;
+            padding: 0.5rem;
+            border-radius: 0.75rem;
             transition: background 0.2s;
-            color: #374151;
-            line-height: 1;
+            color: #475569;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border: 1px solid rgba(226, 232, 240, 0.8);
         }
+
+        .dark .hamburger-btn {
+            color: #94a3b8;
+            border-color: rgba(51, 65, 85, 0.8);
+        }
+
         .hamburger-btn:hover {
-            background-color: #f3f4f6;
+            background-color: #f1f5f9;
+        }
+
+        .dark .hamburger-btn:hover {
+            background-color: #334155;
         }
     </style>
 </head>
-<body class="bg-gray-50">
-    <!-- Navigation Bar -->
-    {% if current_user %}
-    <nav class="bg-white shadow-sm border-b border-gray-200">
-        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div class="flex justify-between items-center h-16">
-                <div class="flex items-center">
-                    <h1 class="text-2xl font-bold text-blue-600">🏠 Hostel Meals</h1>
-                </div>
-                <div class="flex items-center space-x-4">
-                    <span class="text-sm text-gray-600 hidden sm:inline">
-                        Welcome, <strong>{{ current_user.name }}</strong>
-                        {% if current_user.is_manager() %}<span class="ml-2 px-3 py-1 bg-amber-100 text-amber-800 rounded-full text-xs font-semibold">Manager</span>{% endif %}
-                    </span>
-                    
-                    <!-- Nav Links (visible on desktop) -->
-                    <div class="hidden md:flex items-center space-x-2">
-                        {% if current_user.is_manager() %}
-                        <a href="{{ url_for('dashboard') }}" class="nav-link {% if request.endpoint == 'dashboard' %}active{% endif %}">Dashboard</a>
-                        <a href="{{ url_for('manager_panel') }}" class="nav-link {% if request.endpoint == 'manager_panel' %}active{% endif %}">Manager Panel</a>
-                        {% endif %}
-                    </div>
 
-                    <!-- Hamburger Menu Button -->
-                    <div class="relative">
-                        <button onclick="toggleDropdown()" class="hamburger-btn" aria-label="Menu">
-                            ☰
-                        </button>
-                        
-                        <!-- Dropdown Menu -->
-                        <div id="dropdownMenu" class="dropdown-menu">
-                            <!-- User info on mobile -->
-                            <div class="px-4 py-2 border-b border-gray-100 md:hidden">
-                                <div class="font-semibold text-gray-800">{{ current_user.name }}</div>
-                                <div class="text-xs text-gray-500">
-                                    {% if current_user.is_manager() %}👑 Manager{% else %}👤 Member{% endif %}
-                                </div>
+<body class="bg-slate-50 text-slate-800 dark:bg-slate-950 dark:text-slate-100 transition-colors duration-300 min-h-screen flex flex-col {% if current_user %}lg:flex-row{% endif %}">
+    
+    {% if current_user %}
+    <!-- ================== MOBILE SIDEBAR DRAWER (collapsible overlay) ================== -->
+    <div id="mobileSidebar" class="relative z-50 lg:hidden hidden" role="dialog" aria-modal="true">
+        <!-- Backdrop overlay -->
+        <div class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm transition-opacity" onclick="toggleMobileSidebar(false)"></div>
+        
+        <!-- Drawer content -->
+        <div class="fixed inset-y-0 left-0 flex max-w-xs w-full bg-white text-slate-800 dark:bg-slate-950 border-r border-slate-200 dark:border-slate-800 shadow-xl transition transform -translate-x-full duration-300 ease-in-out" id="mobileSidebarContent">
+            <div class="flex flex-col flex-1 h-full min-h-screen">
+                <!-- Sidebar Header -->
+                <div class="flex items-center justify-between h-16 px-6 border-b border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-950">
+                    <a href="{{ url_for('dashboard') }}" class="flex items-center space-x-2">
+                        <img src="{{ url_for('static', filename='favicon.svg') }}" alt="Logo" class="w-8 h-8">
+                        <span class="text-lg font-bold bg-gradient-to-r from-indigo-400 to-blue-400 bg-clip-text text-transparent">Plate &amp; Spoon</span>
+                    </a>
+                    <button class="text-slate-400 hover:text-slate-800 dark:hover:text-white text-2xl font-bold" onclick="toggleMobileSidebar(false)">&times;</button>
+                </div>
+                
+                <!-- Navigation links -->
+                <nav class="flex-1 px-4 py-4 space-y-1.5 overflow-y-auto">
+                    <a href="{{ url_for('dashboard') }}" class="flex items-center px-4 py-3 text-sm font-semibold rounded-xl transition duration-150 {% if request.endpoint == 'dashboard' %}bg-indigo-600 text-white shadow-md shadow-indigo-600/20{% else %}text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 hover:text-slate-900 dark:hover:text-slate-100{% endif %}">
+                        <span class="mr-3 text-base">📊</span> Dashboard
+                    </a>
+                    <a href="{{ url_for('meal_status') }}" class="flex items-center px-4 py-3 text-sm font-semibold rounded-xl transition duration-150 {% if request.endpoint == 'meal_status' %}bg-indigo-600 text-white shadow-md shadow-indigo-600/20{% else %}text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 hover:text-slate-900 dark:hover:text-slate-100{% endif %}">
+                        <span class="mr-3 text-base">🍽️</span> Meal Status
+                    </a>
+                    <a href="{{ url_for('todays_meals') }}" class="flex items-center px-4 py-3 text-sm font-semibold rounded-xl transition duration-150 {% if request.endpoint == 'todays_meals' %}bg-indigo-600 text-white shadow-md shadow-indigo-600/20{% else %}text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 hover:text-slate-900 dark:hover:text-slate-100{% endif %}">
+                        <span class="mr-3 text-base">📋</span> Today's Meals
+                    </a>
+                    <a href="{{ url_for('menu') }}" class="flex items-center px-4 py-3 text-sm font-semibold rounded-xl transition duration-150 {% if request.endpoint == 'menu' %}bg-indigo-600 text-white shadow-md shadow-indigo-600/20{% else %}text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 hover:text-slate-900 dark:hover:text-slate-100{% endif %}">
+                        <span class="mr-3 text-base">🍲</span> Today's Menu
+                    </a>
+                    <a href="{{ url_for('transactions_page') }}" class="flex items-center px-4 py-3 text-sm font-semibold rounded-xl transition duration-150 {% if request.endpoint == 'transactions_page' %}bg-indigo-600 text-white shadow-md shadow-indigo-600/20{% else %}text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 hover:text-slate-900 dark:hover:text-slate-100{% endif %}">
+                        <span class="mr-3 text-base">💳</span> Transactions
+                    </a>
+                    <a href="{{ url_for('members_page') }}" class="flex items-center px-4 py-3 text-sm font-semibold rounded-xl transition duration-150 {% if request.endpoint == 'members_page' %}bg-indigo-600 text-white shadow-md shadow-indigo-600/20{% else %}text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 hover:text-slate-900 dark:hover:text-slate-100{% endif %}">
+                        <span class="mr-3 text-base">👥</span> Member List
+                    </a>
+                    <a href="{{ url_for('history_page') }}" class="flex items-center px-4 py-3 text-sm font-semibold rounded-xl transition duration-150 {% if request.endpoint == 'history_page' %}bg-indigo-600 text-white shadow-md shadow-indigo-600/20{% else %}text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 hover:text-slate-900 dark:hover:text-slate-100{% endif %}">
+                        <span class="mr-3 text-base">🕰️</span> History
+                    </a>
+                </nav>
+                
+                <!-- Sidebar Footer (Profile / Logout) -->
+                <div class="p-4 border-t border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-950">
+                    <div class="flex items-center justify-between">
+                        <div class="flex items-center space-x-3 overflow-hidden">
+                            <div class="w-8 h-8 rounded-full bg-slate-800 border border-slate-700 flex items-center justify-center font-bold text-sm text-indigo-400 shrink-0">
+                                {{ current_user.name[0]|upper }}
                             </div>
-                            
-                            <!-- Dashboard link (mobile) -->
-                            <a href="{{ url_for('dashboard') }}" class="dropdown-item md:hidden">
-                                <span class="icon">📊</span> Dashboard
-                            </a>
-                            
+                            <div class="flex flex-col overflow-hidden">
+                                <span class="text-xs font-semibold text-slate-800 dark:text-slate-200 truncate">{{ current_user.name }}</span>
+                                <span class="text-[9px] text-slate-500 dark:text-slate-500 font-bold uppercase tracking-wider">
+                                    {% if current_user.is_manager() %}Manager{% else %}Member{% endif %}
+                                </span>
+                            </div>
+                        </div>
+                        <div class="relative shrink-0 flex items-center space-x-1">
                             {% if current_user.is_manager() %}
-                            <!-- Manager Panel link (mobile) -->
-                            <a href="{{ url_for('manager_panel') }}" class="dropdown-item md:hidden">
-                                <span class="icon">⚙️</span> Manager Panel
-                            </a>
-                            
-                            <div class="dropdown-divider"></div>
-                            
-                            <!-- Transfer Manager Role -->
-                            <button onclick="openTransferModal()" class="dropdown-item">
-                                <span class="icon">🔄</span> Transfer Manager Role
-                            </button>
-                            
-                            <!-- Transaction History -->
-                            <button onclick="openTransactionHistory()" class="dropdown-item">
-                                <span class="icon">📜</span> Credit/Debit History
+                            <button onclick="openTransferModal(); event.stopPropagation();" title="Transfer Manager Role" class="p-1.5 rounded-lg text-slate-400 hover:text-slate-800 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800 transition">
+                                🔄
                             </button>
                             {% endif %}
-                            
-                            <div class="dropdown-divider"></div>
-                            
-                            <!-- Logout -->
-                            <a href="{{ url_for('logout') }}" class="dropdown-item text-red-600 hover:bg-red-50">
-                                <span class="icon">🚪</span> Logout
+                            <a href="{{ url_for('logout') }}" title="Logout" class="p-1.5 rounded-lg text-slate-400 hover:text-red-400 hover:bg-slate-800 transition">
+                                🚪
                             </a>
                         </div>
                     </div>
                 </div>
             </div>
         </div>
-    </nav>
+    </div>
+
+    <!-- ================== DESKTOP PERSISTENT SIDEBAR ================== -->
+    <aside id="desktopSidebar" class="hidden lg:flex lg:flex-col lg:w-64 lg:fixed lg:inset-y-0 lg:z-40 bg-white text-slate-800 dark:bg-slate-950 border-r border-slate-200 dark:border-slate-800 shadow-lg">
+        <div class="flex flex-col flex-1 h-full min-h-screen">
+            <!-- Sidebar Header -->
+            <div class="flex items-center justify-between h-16 px-6 border-b border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-950">
+                <a href="{{ url_for('dashboard') }}" class="flex items-center space-x-2">
+                    <img src="{{ url_for('static', filename='favicon.svg') }}" alt="Logo" class="w-8 h-8 hover:rotate-12 transition-transform duration-300">
+                    <span class="text-xl font-bold bg-gradient-to-r from-indigo-400 to-blue-400 bg-clip-text text-transparent">Plate &amp; Spoon</span>
+                </a>
+                <button onclick="toggleDesktopSidebar()" class="text-slate-400 hover:text-white transition">
+                    &times;
+                </button>
+            </div>
+            
+            <!-- Navigation links -->
+            <nav class="flex-1 px-4 py-4 space-y-1.5 overflow-y-auto">
+                <a href="{{ url_for('dashboard') }}" class="flex items-center px-4 py-3 text-sm font-semibold rounded-xl transition duration-150 {% if request.endpoint == 'dashboard' %}bg-indigo-600 text-white shadow-md shadow-indigo-600/20{% else %}text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 hover:text-slate-900 dark:hover:text-slate-100{% endif %}">
+                    <span class="mr-3 text-base">📊</span> Dashboard
+                </a>
+                <a href="{{ url_for('meal_status') }}" class="flex items-center px-4 py-3 text-sm font-semibold rounded-xl transition duration-150 {% if request.endpoint == 'meal_status' %}bg-indigo-600 text-white shadow-md shadow-indigo-600/20{% else %}text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 hover:text-slate-900 dark:hover:text-slate-100{% endif %}">
+                    <span class="mr-3 text-base">🍽️</span> Meal Status
+                </a>
+                <a href="{{ url_for('todays_meals') }}" class="flex items-center px-4 py-3 text-sm font-semibold rounded-xl transition duration-150 {% if request.endpoint == 'todays_meals' %}bg-indigo-600 text-white shadow-md shadow-indigo-600/20{% else %}text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 hover:text-slate-900 dark:hover:text-slate-100{% endif %}">
+                    <span class="mr-3 text-base">📋</span> Today's Meals
+                </a>
+                <a href="{{ url_for('menu') }}" class="flex items-center px-4 py-3 text-sm font-semibold rounded-xl transition duration-150 {% if request.endpoint == 'menu' %}bg-indigo-600 text-white shadow-md shadow-indigo-600/20{% else %}text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 hover:text-slate-900 dark:hover:text-slate-100{% endif %}">
+                    <span class="mr-3 text-base">🍲</span> Today's Menu
+                </a>
+                <a href="{{ url_for('transactions_page') }}" class="flex items-center px-4 py-3 text-sm font-semibold rounded-xl transition duration-150 {% if request.endpoint == 'transactions_page' %}bg-indigo-600 text-white shadow-md shadow-indigo-600/20{% else %}text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 hover:text-slate-900 dark:hover:text-slate-100{% endif %}">
+                    <span class="mr-3 text-base">💳</span> Transactions
+                </a>
+                <a href="{{ url_for('members_page') }}" class="flex items-center px-4 py-3 text-sm font-semibold rounded-xl transition duration-150 {% if request.endpoint == 'members_page' %}bg-indigo-600 text-white shadow-md shadow-indigo-600/20{% else %}text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 hover:text-slate-900 dark:hover:text-slate-100{% endif %}">
+                    <span class="mr-3 text-base">👥</span> Member List
+                </a>
+                <a href="{{ url_for('history_page') }}" class="flex items-center px-4 py-3 text-sm font-semibold rounded-xl transition duration-150 {% if request.endpoint == 'history_page' %}bg-indigo-600 text-white shadow-md shadow-indigo-600/20{% else %}text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 hover:text-slate-900 dark:hover:text-slate-100{% endif %}">
+                    <span class="mr-3 text-base">🕰️</span> History
+                </a>
+            </nav>
+            
+            <!-- Sidebar Footer (Profile / Logout) -->
+            <div class="p-4 border-t border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-950">
+                <div class="flex items-center justify-between">
+                    <div class="flex items-center space-x-3 overflow-hidden">
+                        <div class="w-8 h-8 rounded-full bg-slate-800 border border-slate-700 flex items-center justify-center font-bold text-sm text-indigo-400 shrink-0">
+                            {{ current_user.name[0]|upper }}
+                        </div>
+                        <div class="flex flex-col overflow-hidden">
+                            <span class="text-xs font-semibold text-slate-800 dark:text-slate-200 truncate">{{ current_user.name }}</span>
+                            <span class="text-[9px] text-slate-500 dark:text-slate-500 font-bold uppercase tracking-wider">
+                                {% if current_user.is_manager() %}Manager{% else %}Member{% endif %}
+                            </span>
+                        </div>
+                    </div>
+                    <div class="relative shrink-0 flex items-center space-x-1">
+                        {% if current_user.is_manager() %}
+                        <button onclick="openTransferModal(); event.stopPropagation();" title="Transfer Manager Role" class="p-1.5 rounded-lg text-slate-400 hover:text-slate-800 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800 transition">
+                            🔄
+                        </button>
+                        {% endif %}
+                        <a href="{{ url_for('logout') }}" title="Logout" class="p-1.5 rounded-lg text-slate-400 hover:text-red-400 hover:bg-slate-800 transition">
+                            🚪
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </aside>
     {% endif %}
 
-    <!-- Flash Messages -->
-    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-4">
-        {% with messages = get_flashed_messages(with_categories=true) %}
+    <!-- ================== MAIN CONTENT CONTAINER ================== -->
+    <div id="mainContent" class="flex flex-col flex-1 min-w-0 {% if current_user %}lg:pl-64{% endif %} min-h-screen transition-all duration-300">
+        
+        <!-- Header / Top Bar (Desktop and Mobile) -->
+        {% if current_user %}
+        <!-- Header -->
+        <header class="sticky top-0 z-30 flex items-center justify-between h-16 px-4 sm:px-6 lg:px-8 glass-nav border-b border-slate-200/80 dark:border-slate-800/80 shadow-sm transition-colors duration-300">
+            <!-- Left Side: Mobile Menu Button & Title -->
+            <div class="flex items-center space-x-3">
+                <button onclick="toggleSidebar()" class="p-2 rounded-lg border border-slate-200 dark:border-slate-800 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-600 dark:text-slate-300 transition duration-150">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M4 6h16M4 12h16M4 18h16" />
+                    </svg>
+                </button>
+                <h1 class="text-xs font-extrabold uppercase tracking-wider text-slate-400 dark:text-slate-500">
+                    {% if request.endpoint == 'dashboard' %}Dashboard 📊
+                    {% elif request.endpoint == 'meal_status' %}Meal Status 🍽️
+                    {% elif request.endpoint == 'todays_meals' %}Today's Meals 📋
+                    {% elif request.endpoint == 'menu' %}Today's Menu 🍲
+                    {% elif request.endpoint == 'transactions_page' %}Transactions History 💳
+                    {% elif request.endpoint == 'members_page' %}Member List 👥
+                    {% elif request.endpoint == 'history_page' %}History 🕰️
+                    {% else %}Plate &amp; Spoon{% endif %}
+                </h1>
+            </div>
+            
+            <!-- Right Side: User Name, Theme Switcher -->
+            <div class="flex items-center space-x-3">
+                <span class="text-xs text-slate-600 dark:text-slate-300 hidden sm:inline">
+                    Welcome, <strong class="text-slate-800 dark:text-slate-100 font-semibold">{{ current_user.name }}</strong>
+                    {% if current_user.is_manager() %}
+                    <span class="ml-2 px-2 py-0.5 bg-amber-50 dark:bg-amber-950/40 text-amber-700 dark:text-amber-400 border border-amber-200/60 dark:border-amber-900/40 rounded-full text-[10px] font-bold">Manager</span>
+                    {% endif %}
+                </span>
+
+                <!-- Theme Toggle Button -->
+                <button onclick="toggleTheme()" class="p-2 border border-slate-200 dark:border-slate-800 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-600 dark:text-slate-300 transition duration-150" aria-label="Toggle Theme">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 hidden dark:block text-yellow-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M12 3v1m0 16v1m9-9h-1M4 9H3m15.364-6.364l-.707.707M6.343 17.657l-.707.707m0-12.728l.707.707m12.728 12.728l.707-.707M12 8a4 4 0 100 8 4 4 0 000-8z" />
+                    </svg>
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 block dark:hidden text-slate-700" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" />
+                    </svg>
+                </button>
+            </div>
+        </header>
+        {% endif %}
+
+        <!-- Flash Messages Container -->
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-6 w-full">
+            {% with messages = get_flashed_messages(with_categories=true) %}
             {% if messages %}
-                {% for category, message in messages %}
-                <div class="mb-4 p-4 rounded-lg {% if category == 'danger' %}bg-red-100 text-red-800{% elif category == 'success' %}bg-green-100 text-green-800{% elif category == 'warning' %}bg-yellow-100 text-yellow-800{% else %}bg-blue-100 text-blue-800{% endif %}">
-                    {{ message }}
+            {% for category, message in messages %}
+            <div class="mb-4 p-4 rounded-xl shadow-sm border flex items-center justify-between animate-fade-in transition-all duration-300 {% if category == 'danger' %}bg-red-50 border-red-200 text-red-800 dark:bg-red-950/20 dark:border-red-900/40 dark:text-red-400{% elif category == 'success' %}bg-green-50 border-green-200 text-green-800 dark:bg-green-950/20 dark:border-green-900/40 dark:text-green-400{% elif category == 'warning' %}bg-yellow-50 border-yellow-200 text-yellow-800 dark:bg-yellow-950/20 dark:border-yellow-900/40 dark:text-yellow-400{% else %}bg-blue-50 border-blue-200 text-blue-800 dark:bg-blue-950/20 dark:border-blue-900/40 dark:text-blue-400{% endif %}">
+                <div class="flex items-center space-x-2">
+                    <span>{% if category == 'danger' %}⚠️{% elif category == 'success' %}✅{% else %}ℹ️{% endif %}</span>
+                    <span class="font-medium text-sm">{{ message }}</span>
                 </div>
-                {% endfor %}
+                <button onclick="this.parentElement.remove()" class="text-xs opacity-60 hover:opacity-100 transition-opacity">&times;</button>
+            </div>
+            {% endfor %}
             {% endif %}
-        {% endwith %}
+            {% endwith %}
+        </div>
+
+        <!-- Page Content -->
+        <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 flex-1 w-full animate-fade-in">
+            {% block content %}{% endblock %}
+        </main>
+        
+        <!-- Footer -->
+        <footer class="bg-white dark:bg-slate-900 border-t border-slate-200/80 dark:border-slate-800/80 transition-colors duration-300 mt-auto">
+            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+                <div class="text-center text-slate-500 dark:text-slate-400 text-sm flex flex-col sm:flex-row items-center justify-between gap-4">
+                    <p>&copy; 2026 Plate &amp; Spoon - Hostel Meal Management. All rights reserved.</p>
+                    <div class="flex items-center space-x-1.5 text-xs text-slate-400 dark:text-slate-500">
+                        <span>Designed with</span>
+                        <span class="text-red-500">❤️</span>
+                        <span>for premium dining management</span>
+                    </div>
+                </div>
+            </div>
+        </footer>
     </div>
 
     <!-- ========== TRANSFER MANAGER MODAL ========== -->
-    <div id="transferModal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-        <div class="bg-white rounded-lg shadow-lg p-8 max-w-md w-full">
-            <h2 class="text-2xl font-bold text-gray-800 mb-4">🔄 Transfer Manager Role</h2>
-            <p class="text-sm text-gray-600 mb-4">
-                Transfer manager permissions to another member. After transfer, you will become a regular member.
+    <div id="transferModal" class="hidden fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4 transition-all">
+        <div class="bg-white dark:bg-slate-900 rounded-2xl shadow-premium dark:shadow-premium-dark border border-slate-100 dark:border-slate-800 p-6 md:p-8 max-w-md w-full animate-scale-up transform">
+            <div class="flex items-center space-x-3 mb-4">
+                <span class="text-2xl">🔄</span>
+                <h2 class="text-xl font-bold text-slate-900 dark:text-slate-100">Transfer Manager Role</h2>
+            </div>
+            <p class="text-sm text-slate-600 dark:text-slate-400 mb-6">
+                Transfer manager permissions to another member. Upon role transfer, you will be logged out and converted to a regular member.
             </p>
-            
+
             <div class="space-y-4">
                 <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-1">Select New Manager</label>
-                    <select id="newManagerSelect" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-amber-500 bg-white">
+                    <label class="block text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-2">Select New Manager</label>
+                    <select id="newManagerSelect"
+                        class="w-full px-4 py-2.5 border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 rounded-xl focus:outline-none focus:ring-2 focus:ring-amber-500 text-slate-950 dark:text-slate-100 transition duration-150">
                         <option value="">-- Select a member --</option>
                         {% for user in potential_managers %}
                         <option value="{{ user.id }}">{{ user.name }} ({{ user.email }})</option>
@@ -195,14 +446,16 @@
                         {% endif %}
                     </select>
                 </div>
-                
+
                 <div id="transferMessage" class="hidden"></div>
-                
-                <div class="flex gap-4">
-                    <button onclick="transferManagerRole()" class="flex-1 px-4 py-2 bg-amber-600 text-white rounded-lg hover:bg-amber-700 font-semibold">
+
+                <div class="flex gap-4 pt-2">
+                    <button onclick="transferManagerRole()"
+                        class="flex-1 px-4 py-2.5 bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white rounded-xl font-semibold shadow-sm hover:shadow transition duration-200">
                         Transfer Role
                     </button>
-                    <button onclick="closeTransferModal()" class="flex-1 px-4 py-2 bg-gray-300 text-gray-700 rounded-lg hover:bg-gray-400 font-semibold">
+                    <button onclick="closeTransferModal()"
+                        class="flex-1 px-4 py-2.5 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 rounded-xl font-semibold transition duration-200">
                         Cancel
                     </button>
                 </div>
@@ -211,64 +464,96 @@
     </div>
 
     <!-- ========== TRANSACTION HISTORY MODAL ========== -->
-    <div id="transactionModal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-        <div class="bg-white rounded-lg shadow-lg p-8 max-w-2xl w-full max-h-[80vh] overflow-hidden">
-            <div class="flex justify-between items-center mb-4">
-                <h2 class="text-2xl font-bold text-gray-800">📜 Credit/Debit History</h2>
-                <button onclick="closeTransactionModal()" class="text-gray-500 hover:text-gray-700 text-2xl">&times;</button>
+    <div id="transactionModal"
+        class="hidden fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4 transition-all">
+        <div class="bg-white dark:bg-slate-900 rounded-2xl shadow-premium dark:shadow-premium-dark border border-slate-100 dark:border-slate-800 p-6 md:p-8 max-w-2xl w-full max-h-[85vh] flex flex-col animate-scale-up">
+            <div class="flex justify-between items-center mb-6 pb-3 border-b border-slate-200 dark:border-slate-800">
+                <div class="flex items-center space-x-3">
+                    <span class="text-2xl">📜</span>
+                    <h2 class="text-xl font-bold text-slate-900 dark:text-slate-100">Credit/Debit History</h2>
+                </div>
+                <button onclick="closeTransactionModal()"
+                    class="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 text-2xl font-semibold">&times;</button>
             </div>
-            
-            <div class="overflow-y-auto max-h-[60vh]">
-                <div id="transactionHistoryList" class="space-y-2">
-                    <div class="text-gray-500 text-sm">Loading transactions...</div>
+
+            <div class="overflow-y-auto flex-1 pr-1">
+                <div id="transactionHistoryList" class="space-y-3">
+                    <div class="text-slate-500 text-sm py-8 text-center">Loading transactions...</div>
                 </div>
             </div>
-            
-            <div class="mt-4 flex justify-end">
-                <button onclick="closeTransactionModal()" class="px-4 py-2 bg-gray-300 text-gray-700 rounded-lg hover:bg-gray-400 font-semibold">
+
+            <div class="mt-6 pt-4 border-t border-slate-200 dark:border-slate-800 flex justify-end">
+                <button onclick="closeTransactionModal()"
+                    class="px-5 py-2.5 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 rounded-xl font-semibold transition duration-200">
                     Close
                 </button>
             </div>
         </div>
     </div>
 
-    <!-- Main Content -->
-    <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {% block content %}{% endblock %}
-    </main>
-
-    <!-- Footer -->
-    <footer class="bg-white border-t border-gray-200 mt-12">
-        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-            <div class="text-center text-gray-600 text-sm">
-                <p>&copy; 2026 Hostel Meal Management System. All rights reserved.</p>
-            </div>
-        </div>
-    </footer>
-
     {% block scripts %}{% endblock %}
-    
-    <!-- Global JavaScript -->
+
+    <!-- Global Theme Switcher & Mobile Sidebar JavaScript -->
     <script>
-        // Toggle dropdown menu
-        function toggleDropdown() {
-            const menu = document.getElementById('dropdownMenu');
-            menu.classList.toggle('show');
+        // Toggle Theme
+        function toggleTheme() {
+            if (document.documentElement.classList.contains('dark')) {
+                document.documentElement.classList.remove('dark');
+                localStorage.setItem('theme', 'light');
+            } else {
+                document.documentElement.classList.add('dark');
+                localStorage.setItem('theme', 'dark');
+            }
         }
 
-        // Close dropdown when clicking outside
-        document.addEventListener('click', function(event) {
-            const menu = document.getElementById('dropdownMenu');
-            const btn = document.querySelector('.hamburger-btn');
-            if (!btn.contains(event.target) && !menu.contains(event.target)) {
-                menu.classList.remove('show');
+        // Toggle Mobile Sidebar
+        function toggleMobileSidebar(show) {
+            const sidebar = document.getElementById('mobileSidebar');
+            const content = document.getElementById('mobileSidebarContent');
+            if (!sidebar || !content) return;
+            if (show) {
+                sidebar.classList.remove('hidden');
+                setTimeout(() => {
+                    content.classList.remove('-translate-x-full');
+                }, 10);
+            } else {
+                content.classList.add('-translate-x-full');
+                setTimeout(() => {
+                    sidebar.classList.add('hidden');
+                }, 300);
             }
-        });
+        }
+
+        // Toggle Desktop Sidebar
+        function toggleDesktopSidebar() {
+            const sidebar = document.getElementById('desktopSidebar');
+            const mainContent = document.getElementById('mainContent');
+            if (!sidebar || !mainContent) return;
+
+            if (sidebar.classList.contains('lg:flex')) {
+                // close it
+                sidebar.classList.remove('lg:flex');
+                sidebar.classList.add('lg:hidden');
+                mainContent.classList.remove('lg:pl-64');
+            } else {
+                // open it
+                sidebar.classList.remove('lg:hidden');
+                sidebar.classList.add('lg:flex');
+                mainContent.classList.add('lg:pl-64');
+            }
+        }
+
+        function toggleSidebar() {
+            if (window.innerWidth >= 1024) {
+                toggleDesktopSidebar();
+            } else {
+                toggleMobileSidebar(true);
+            }
+        }
 
         // Transfer Manager Functions
         function openTransferModal() {
             document.getElementById('transferModal').classList.remove('hidden');
-            document.getElementById('dropdownMenu').classList.remove('show');
         }
 
         function closeTransferModal() {
@@ -282,14 +567,14 @@
             const messageDiv = document.getElementById('transferMessage');
 
             if (!userId) {
-                messageDiv.className = 'mt-3 p-3 bg-red-100 text-red-800 rounded-lg';
+                messageDiv.className = 'mt-3 p-3 bg-red-50 border border-red-200 text-red-800 dark:bg-red-950/20 dark:border-red-900/40 dark:text-red-400 rounded-xl text-sm font-medium';
                 messageDiv.textContent = '⚠️ Please select a member to transfer the manager role.';
                 messageDiv.classList.remove('hidden');
                 return;
             }
 
             const memberName = select.options[select.selectedIndex].text;
-            
+
             if (!confirm(`⚠️ Are you sure you want to transfer the Manager role to "${memberName}"?\n\nYou will be logged out and become a regular member.`)) {
                 return;
             }
@@ -306,22 +591,22 @@
             .then(response => response.json())
             .then(data => {
                 if (data.success) {
-                    messageDiv.className = 'mt-3 p-3 bg-green-100 text-green-800 rounded-lg';
+                    messageDiv.className = 'mt-3 p-3 bg-green-50 border border-green-200 text-green-800 dark:bg-green-950/20 dark:border-green-900/40 dark:text-green-400 rounded-xl text-sm font-medium';
                     messageDiv.textContent = '✅ ' + data.message;
                     messageDiv.classList.remove('hidden');
-                    
+
                     setTimeout(() => {
                         window.location.href = '/login';
                     }, 2000);
                 } else {
-                    messageDiv.className = 'mt-3 p-3 bg-red-100 text-red-800 rounded-lg';
+                    messageDiv.className = 'mt-3 p-3 bg-red-50 border border-red-200 text-red-800 dark:bg-red-950/20 dark:border-red-900/40 dark:text-red-400 rounded-xl text-sm font-medium';
                     messageDiv.textContent = '❌ Error: ' + data.message;
                     messageDiv.classList.remove('hidden');
                 }
             })
             .catch(error => {
                 console.error('Error:', error);
-                messageDiv.className = 'mt-3 p-3 bg-red-100 text-red-800 rounded-lg';
+                messageDiv.className = 'mt-3 p-3 bg-red-50 border border-red-200 text-red-800 dark:bg-red-950/20 dark:border-red-900/40 dark:text-red-400 rounded-xl text-sm font-medium';
                 messageDiv.textContent = '❌ An error occurred while transferring role.';
                 messageDiv.classList.remove('hidden');
             });
@@ -330,7 +615,6 @@
         // Transaction History Functions
         function openTransactionHistory() {
             document.getElementById('transactionModal').classList.remove('hidden');
-            document.getElementById('dropdownMenu').classList.remove('show');
             loadTransactionHistory();
         }
 
@@ -340,7 +624,7 @@
 
         function loadTransactionHistory() {
             const list = document.getElementById('transactionHistoryList');
-            
+
             fetch('/api/get-all-transactions')
                 .then(response => response.json())
                 .then(data => {
@@ -349,17 +633,17 @@
                         data.transactions.forEach(trans => {
                             const isDeposit = trans.type === 'deposit';
                             html += `
-                                <div class="flex justify-between items-center py-2 border-b border-gray-200 hover:bg-gray-50 px-2 rounded">
-                                    <div>
-                                        <div class="font-medium text-gray-800">${trans.user_name}</div>
-                                        <div class="text-sm text-gray-500">${trans.date}</div>
-                                        ${trans.description ? `<div class="text-xs text-gray-400">${trans.description}</div>` : ''}
+                                <div class="flex justify-between items-center py-3 px-4 border border-slate-100 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-800/40 rounded-xl transition duration-150">
+                                    <div class="space-y-1">
+                                        <div class="font-semibold text-slate-800 dark:text-slate-200">${trans.user_name}</div>
+                                        <div class="text-xs text-slate-400 dark:text-slate-500">${trans.date}</div>
+                                        ${trans.description ? `<div class="text-xs text-slate-500 dark:text-slate-400 bg-slate-100 dark:bg-slate-800/80 px-2 py-0.5 rounded-md inline-block">${trans.description}</div>` : ''}
                                     </div>
-                                    <div class="text-right">
-                                        <div class="font-semibold ${isDeposit ? 'text-green-600' : 'text-red-600'}">
+                                    <div class="text-right space-y-1">
+                                        <div class="font-bold ${isDeposit ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}">
                                             ${isDeposit ? '+' : '-'}৳${parseFloat(trans.amount).toFixed(2)}
                                         </div>
-                                        <div class="text-xs text-gray-400">${trans.type}</div>
+                                        <span class="inline-block text-[10px] uppercase font-bold tracking-wider px-2 py-0.5 rounded-full ${isDeposit ? 'bg-green-50 text-green-700 dark:bg-green-950/20 dark:text-green-400' : 'bg-red-50 text-red-700 dark:bg-red-950/20 dark:text-red-400'}">${trans.type}</span>
                                     </div>
                                 </div>
                             `;
@@ -367,7 +651,7 @@
                         list.innerHTML = html;
                     } else {
                         list.innerHTML = `
-                            <div class="text-gray-500 text-sm py-4 text-center">
+                            <div class="text-slate-500 text-sm py-8 text-center">
                                 No transactions found.
                             </div>
                         `;
@@ -376,7 +660,7 @@
                 .catch(error => {
                     console.error('Error:', error);
                     list.innerHTML = `
-                        <div class="text-red-500 text-sm py-4 text-center">
+                        <div class="text-red-500 text-sm py-8 text-center">
                             Error loading transactions. Please try again.
                         </div>
                     `;
@@ -384,17 +668,22 @@
         }
 
         // Close modals when clicking outside
-        document.getElementById('transferModal').addEventListener('click', function(e) {
-            if (e.target === this) {
-                closeTransferModal();
-            }
-        });
+        if (document.getElementById('transferModal')) {
+            document.getElementById('transferModal').addEventListener('click', function (e) {
+                if (e.target === this) {
+                    closeTransferModal();
+                }
+            });
+        }
 
-        document.getElementById('transactionModal').addEventListener('click', function(e) {
-            if (e.target === this) {
-                closeTransactionModal();
-            }
-        });
+        if (document.getElementById('transactionModal')) {
+            document.getElementById('transactionModal').addEventListener('click', function (e) {
+                if (e.target === this) {
+                    closeTransactionModal();
+                }
+            });
+        }
     </script>
 </body>
+
 </html>

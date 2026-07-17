@@ -8,7 +8,7 @@ from flask import Flask, render_template, request, redirect, url_for, session, f
 from functools import wraps
 from datetime import datetime, date, timedelta
 from config import config
-from models import db, User, Meal, Transaction, MealRate, get_current_meal_rate, get_hostel_stats,Expense
+from models import db, User, Meal, Transaction, MealRate, get_current_meal_rate, get_hostel_stats, get_monthly_meal_rate, get_monthly_hostel_stats, Expense, MealLock, DailyMenu
 import subprocess
 import sys
 
@@ -37,6 +37,66 @@ def create_app(config_name='development'):
     # Create database tables
     with app.app_context():
         db.create_all()
+        # Safe migration: Add user_id column to expenses table if it doesn't exist
+        try:
+            db.session.execute(db.text("SELECT user_id FROM expenses LIMIT 1"))
+        except Exception:
+            db.session.rollback()
+            try:
+                db.session.execute(db.text("ALTER TABLE expenses ADD COLUMN user_id INTEGER REFERENCES users(id)"))
+                db.session.commit()
+            except Exception as e:
+                print(f"Error migrating database user_id: {e}")
+                db.session.rollback()
+
+        # Safe migration: Add breakfast, lunch, dinner columns to meals table if they don't exist
+        for col_name in ['breakfast', 'lunch', 'dinner']:
+            try:
+                db.session.execute(db.text(f"SELECT {col_name} FROM meals LIMIT 1"))
+            except Exception:
+                db.session.rollback()
+                try:
+                    db.session.execute(db.text(f"ALTER TABLE meals ADD COLUMN {col_name} BOOLEAN DEFAULT 0"))
+                    db.session.commit()
+                except Exception as e:
+                    print(f"Error migrating database column {col_name}: {e}")
+                    db.session.rollback()
+
+        # Backfill existing meals where breakfast, lunch, or dinner are NULL
+        try:
+            uninitialized_meals = Meal.query.filter((Meal.breakfast == None) | (Meal.lunch == None) | (Meal.dinner == None)).all()
+            if uninitialized_meals:
+                for meal in uninitialized_meals:
+                    if meal.meal_count == 2.5:
+                        meal.breakfast = True
+                        meal.lunch = True
+                        meal.dinner = True
+                    elif meal.meal_count == 2.0:
+                        meal.breakfast = False
+                        meal.lunch = True
+                        meal.dinner = True
+                    elif meal.meal_count == 1.5:
+                        meal.breakfast = True
+                        meal.lunch = True
+                        meal.dinner = False
+                    elif meal.meal_count == 1.0:
+                        meal.breakfast = False
+                        meal.lunch = True
+                        meal.dinner = False
+                    elif meal.meal_count == 0.5:
+                        meal.breakfast = True
+                        meal.lunch = False
+                        meal.dinner = False
+                    else:
+                        meal.breakfast = False
+                        meal.lunch = False
+                        meal.dinner = False
+                db.session.commit()
+                print(f"[Migration] Backfilled {len(uninitialized_meals)} legacy meal entries.")
+        except Exception as e:
+            print(f"Error backfilling meals: {e}")
+            db.session.rollback()
+                
         # Create default meal rate if doesn't exist
         if MealRate.query.first() is None:
             default_rate = MealRate(rate=50, effective_date=date.today(), description="Initial meal rate")
@@ -136,7 +196,14 @@ def create_app(config_name='development'):
             return redirect(url_for('login'))
         
         return render_template('register.html')
-    
+    @app.context_processor
+    def inject_potential_managers():
+        if 'user_id' in session:
+            user = User.query.get(session['user_id'])
+            if user and user.is_manager():
+                return dict(potential_managers=User.query.filter_by(role='member', is_active=True).all())
+        return dict(potential_managers=[])
+
     @app.route('/dashboard')
     @login_required
     def dashboard():
@@ -146,9 +213,25 @@ def create_app(config_name='development'):
         # FIX 1: Get ALL active users (members + manager) for dashboard
         all_users = User.query.filter_by(is_active=True).all()
         
-        # Get meals for current month
-        today = date.today()
-        first_day = date(today.year, today.month, 1)
+        month_param = request.args.get('month', type=int)
+        year_param = request.args.get('year', type=int)
+        today_real = date.today()
+        
+        if month_param and year_param:
+            first_day = date(year_param, month_param, 1)
+            if month_param == 12:
+                next_month = date(year_param + 1, 1, 1)
+            else:
+                next_month = date(year_param, month_param + 1, 1)
+            last_day = next_month - timedelta(days=1)
+            
+            if first_day.year == today_real.year and first_day.month == today_real.month:
+                target_end_date = today_real
+            else:
+                target_end_date = last_day
+        else:
+            first_day = date(today_real.year, today_real.month, 1)
+            target_end_date = today_real
         
         # Get all meals for this month
         meals_data = {}
@@ -156,23 +239,27 @@ def create_app(config_name='development'):
             user_meals = Meal.query.filter(
                 Meal.user_id == user.id,
                 Meal.date >= first_day,
-                Meal.date <= today
+                Meal.date <= target_end_date
             ).all()
             meals_data[user.id] = {user_meal.date: user_meal.meal_count for user_meal in user_meals}
         
         # Get all dates in current month
         all_dates = []
         current_date = first_day
-        while current_date <= today:
+        while current_date <= target_end_date:
             all_dates.append(current_date)
             current_date += timedelta(days=1)
+            
+        target_year = first_day.year
+        target_month = first_day.month
         
-        # Calculate stats for each user
+        # Calculate stats for each user (strictly monthly for meals and cost, overall for balance)
         user_stats = []
         for user in all_users:
-            total_meals = user.get_total_meals()
-            total_cost = user.get_total_cost()
-            balance = user.get_balance()
+            monthly_meals = user.get_monthly_meals(target_year, target_month)
+            monthly_cost = user.get_monthly_cost(target_year, target_month)
+            total_deposited = user.get_total_deposited() # Overall
+            balance = user.get_balance() # Overall running balance
             
             # Check if user is manager
             is_manager = user.is_manager()
@@ -180,77 +267,339 @@ def create_app(config_name='development'):
             user_stats.append({
                 'user': user,
                 'daily_meals': [meals_data.get(user.id, {}).get(d, 0) for d in all_dates],
-                'total_meals': total_meals,
-                'meal_rate': get_current_meal_rate(),
-                'total_cost': total_cost,
+                'total_meals': monthly_meals,
+                'meal_rate': get_monthly_meal_rate(target_year, target_month),
+                'total_deposited': total_deposited,
+                'total_cost': monthly_cost,
                 'balance': balance,
                 'is_manager': is_manager  # Add manager flag for display
             })
         
         # Get hostel stats
-        hostel_stats = get_hostel_stats()
+        hostel_stats = get_monthly_hostel_stats(target_year, target_month)
+        
+        # Show month end warning on dashboard for manager if it's late in the month
+        show_month_end_warning = False
+        if current_user.is_manager() and today_real.day >= 25 and today_real.year == target_year and today_real.month == target_month:
+            show_month_end_warning = True
         
         return render_template(
             'dashboard.html',
             current_user=current_user,
-            user_stats=user_stats,  # Renamed from member_stats
+            user_stats=user_stats,
             all_dates=all_dates,
-            hostel_stats=hostel_stats
+            hostel_stats=hostel_stats,
+            show_month_end_warning=show_month_end_warning,
+            target_year=target_year,
+            target_month=target_month
         )
-    
-    @app.route('/manager')
-    @manager_required
-    def manager_panel():
-        """Manager Panel"""
+
+    @app.route('/meal-status', methods=['GET'])
+    @login_required
+    def meal_status():
+        """Meal Status - Members toggle their meals, Manager views all and locks slots"""
         current_user = User.query.get(session['user_id'])
         
-        # FIX 1: Get ALL active users (members + manager) for manager panel
-        all_users = User.query.filter_by(is_active=True).all()
-        
-        # Get today's date
+        # Manager can view and edit other members' status by passing user_id query param
+        target_user_id = request.args.get('user_id', type=int)
+        if target_user_id and current_user.is_manager():
+            target_user = User.query.get(target_user_id)
+        else:
+            target_user = current_user
+            target_user_id = current_user.id
+            
+        # Display today + next 6 days
         today = date.today()
+        dates_range = [today + timedelta(days=i) for i in range(7)]
         
-        # Get meal entries for today
-        today_meals = {}
-        for user in all_users:
-            meal = Meal.query.filter_by(user_id=user.id, date=today).first()
-            today_meals[user.id] = meal.meal_count if meal else 0
+        # Get existing meals for these dates
+        meals = Meal.query.filter(
+            Meal.user_id == target_user_id,
+            Meal.date >= today,
+            Meal.date <= dates_range[-1]
+        ).all()
+        meals_by_date = {m.date: m for m in meals}
         
-        # Get all users with their balances and recent transactions
-        user_info = []
-        for user in all_users:
-            balance = user.get_balance()
-            total_meals = user.get_total_meals()
-            
-            # Get recent transactions
-            recent_trans = Transaction.query.filter_by(user_id=user.id).order_by(
-                Transaction.date.desc()
-            ).limit(5).all()
-            
-            user_info.append({
-                'user': user,
-                'today_meals': today_meals.get(user.id, 0),
-                'total_meals': total_meals,
-                'balance': balance,
-                'recent_transactions': recent_trans,
-                'is_manager': user.is_manager()
-            })
+        # Get locks for these dates
+        locks = MealLock.query.filter(
+            MealLock.date >= today,
+            MealLock.date <= dates_range[-1]
+        ).all()
+        locks_by_date = {l.date: l for l in locks}
         
-        # Get hostel stats
-        hostel_stats = get_hostel_stats()
-        
-        # Get all members (non-manager) for transfer list
-        potential_managers = User.query.filter_by(role='member', is_active=True).all()
+        # All active users for selector in manager mode
+        all_users = User.query.filter_by(is_active=True).all() if current_user.is_manager() else []
         
         return render_template(
-            'manager.html',
+            'meal_status.html',
             current_user=current_user,
-            user_info=user_info,  # Renamed from member_info
-            hostel_stats=hostel_stats,
+            target_user=target_user,
+            dates_range=dates_range,
+            meals_by_date=meals_by_date,
+            locks_by_date=locks_by_date,
+            all_users=all_users,
+            today=today
+        )
+
+    @app.route('/api/toggle-meal-status', methods=['POST'])
+    @login_required
+    def toggle_meal_status():
+        """API endpoint to toggle a user's breakfast/lunch/dinner status"""
+        current_user = User.query.get(session['user_id'])
+        data = request.json or {}
+        
+        target_user_id = data.get('user_id')
+        meal_date_str = data.get('date')
+        meal_type = data.get('meal_type')  # 'breakfast', 'lunch', or 'dinner'
+        is_checked = data.get('checked', False)
+        
+        if not all([target_user_id, meal_date_str, meal_type]):
+            return {'success': False, 'message': 'Missing parameters'}, 400
+            
+        try:
+            meal_date = datetime.strptime(meal_date_str, '%Y-%m-%d').date()
+        except ValueError:
+            return {'success': False, 'message': 'Invalid date format'}, 400
+            
+        # Check permissions: members can only edit their own status
+        if target_user_id != current_user.id and not current_user.is_manager():
+            return {'success': False, 'message': 'Unauthorized to change this meal status'}, 403
+            
+        # Check if locked for this date and type
+        lock = MealLock.query.filter_by(date=meal_date).first()
+        if lock:
+            if meal_type == 'breakfast' and lock.breakfast_locked:
+                return {'success': False, 'message': 'Breakfast is locked for this date'}, 403
+            elif meal_type == 'lunch' and lock.lunch_locked:
+                return {'success': False, 'message': 'Lunch is locked for this date'}, 403
+            elif meal_type == 'dinner' and lock.dinner_locked:
+                return {'success': False, 'message': 'Dinner is locked for this date'}, 403
+                
+        # Find or create meal
+        meal = Meal.query.filter_by(user_id=target_user_id, date=meal_date).first()
+        if not meal:
+            meal = Meal(user_id=target_user_id, date=meal_date)
+            db.session.add(meal)
+            
+        if meal_type == 'breakfast':
+            meal.breakfast = is_checked
+        elif meal_type == 'lunch':
+            meal.lunch = is_checked
+        elif meal_type == 'dinner':
+            meal.dinner = is_checked
+            
+        meal.update_meal_count()
+        meal.updated_at = datetime.utcnow()
+        db.session.commit()
+        
+        return {
+            'success': True,
+            'message': f'{meal_type.capitalize()} updated',
+            'meal_count': meal.meal_count
+        }
+
+    @app.route('/api/toggle-meal-lock', methods=['POST'])
+    @manager_required
+    def toggle_meal_lock():
+        """API endpoint for manager to lock/unlock breakfast/lunch/dinner"""
+        data = request.json or {}
+        meal_date_str = data.get('date')
+        meal_type = data.get('meal_type')
+        is_locked = data.get('locked', False)
+        
+        if not all([meal_date_str, meal_type]):
+            return {'success': False, 'message': 'Missing parameters'}, 400
+            
+        try:
+            meal_date = datetime.strptime(meal_date_str, '%Y-%m-%d').date()
+        except ValueError:
+            return {'success': False, 'message': 'Invalid date format'}, 400
+            
+        lock = MealLock.query.filter_by(date=meal_date).first()
+        if not lock:
+            lock = MealLock(date=meal_date)
+            db.session.add(lock)
+            
+        if meal_type == 'breakfast':
+            lock.breakfast_locked = is_locked
+        elif meal_type == 'lunch':
+            lock.lunch_locked = is_locked
+        elif meal_type == 'dinner':
+            lock.dinner_locked = is_locked
+            
+        db.session.commit()
+        
+        action = "locked" if is_locked else "unlocked"
+        return {
+            'success': True,
+            'message': f'{meal_type.capitalize()} is now {action} for {meal_date_str}.',
+            'locked': is_locked
+        }
+
+    @app.route('/todays-meals')
+    @login_required
+    def todays_meals():
+        """Today's Meal List - Displays breakfast, lunch, dinner statuses and totals for today"""
+        current_user = User.query.get(session['user_id'])
+        today = date.today()
+        
+        all_users = User.query.filter_by(is_active=True).all()
+        meals = Meal.query.filter_by(date=today).all()
+        meals_by_user = {m.user_id: m for m in meals}
+        
+        lock = MealLock.query.filter_by(date=today).first()
+        
+        user_list = []
+        total_breakfasts = 0
+        total_lunches = 0
+        total_dinners = 0
+        total_meal_count = 0.0
+        
+        for user in all_users:
+            meal = meals_by_user.get(user.id)
+            b = meal.breakfast if meal else False
+            l = meal.lunch if meal else False
+            d = meal.dinner if meal else False
+            m_count = meal.meal_count if meal else 0.0
+            
+            if b: total_breakfasts += 1
+            if l: total_lunches += 1
+            if d: total_dinners += 1
+            total_meal_count += m_count
+            
+            user_list.append({
+                'user': user,
+                'breakfast': b,
+                'lunch': l,
+                'dinner': d,
+                'meal_count': m_count
+            })
+            
+        return render_template(
+            'todays_meals.html',
+            current_user=current_user,
+            user_list=user_list,
             today=today,
-            potential_managers=potential_managers  # For transfer dropdown
+            lock=lock,
+            total_breakfasts=total_breakfasts,
+            total_lunches=total_lunches,
+            total_dinners=total_dinners,
+            total_meal_count=total_meal_count
+        )
+
+    @app.route('/menu')
+    @login_required
+    def menu():
+        """Today's and Weekly Menu Planner"""
+        current_user = User.query.get(session['user_id'])
+        today = date.today()
+        dates_range = [today + timedelta(days=i) for i in range(7)]
+        
+        menus = DailyMenu.query.filter(
+            DailyMenu.date >= today,
+            DailyMenu.date <= dates_range[-1]
+        ).all()
+        menus_by_date = {m.date: m for m in menus}
+        
+        return render_template(
+            'menu.html',
+            current_user=current_user,
+            dates_range=dates_range,
+            menus_by_date=menus_by_date,
+            today=today
+        )
+
+    @app.route('/api/update-menu', methods=['POST'])
+    @manager_required
+    def update_menu():
+        """API endpoint to set daily menus"""
+        data = request.json or {}
+        menu_date_str = data.get('date')
+        breakfast_menu = data.get('breakfast', '').strip()
+        lunch_menu = data.get('lunch', '').strip()
+        dinner_menu = data.get('dinner', '').strip()
+        
+        if not menu_date_str:
+            return {'success': False, 'message': 'Missing date'}, 400
+            
+        try:
+            menu_date = datetime.strptime(menu_date_str, '%Y-%m-%d').date()
+        except ValueError:
+            return {'success': False, 'message': 'Invalid date format'}, 400
+            
+        menu = DailyMenu.query.filter_by(date=menu_date).first()
+        if not menu:
+            menu = DailyMenu(date=menu_date)
+            db.session.add(menu)
+            
+        menu.breakfast_menu = breakfast_menu
+        menu.lunch_menu = lunch_menu
+        menu.dinner_menu = dinner_menu
+        menu.updated_at = datetime.utcnow()
+        db.session.commit()
+        
+        return {
+            'success': True,
+            'message': f'Menu for {menu_date_str} updated successfully!'
+        }
+
+    @app.route('/transactions')
+    @login_required
+    def transactions_page():
+        """Transactions Page - Shows expenses and user deposits/withdrawals for transparent auditing"""
+        current_user = User.query.get(session['user_id'])
+        all_transactions = Transaction.query.order_by(Transaction.date.desc()).all()
+        all_expenses = Expense.query.order_by(Expense.date.desc()).all()
+        all_users = User.query.filter_by(is_active=True).all()
+        
+        return render_template(
+            'transactions.html',
+            current_user=current_user,
+            transactions=all_transactions,
+            expenses=all_expenses,
+            all_users=all_users
+        )
+
+    @app.route('/members')
+    @login_required
+    def members_page():
+        """Members Page - Lists all members with unique auto-generated IDs"""
+        current_user = User.query.get(session['user_id'])
+        all_users = User.query.filter_by(is_active=True).order_by(User.id.asc()).all()
+        
+        return render_template(
+            'members.html',
+            current_user=current_user,
+            members=all_users
         )
     
+    @app.route('/history')
+    @login_required
+    def history_page():
+        """History - View past months sheets"""
+        current_user = User.query.get(session['user_id'])
+        
+        # Get distinct months from Meal dates
+        meals = Meal.query.with_entities(Meal.date).all()
+        months_set = set((m.date.year, m.date.month) for m in meals)
+        
+        # Ensure current month is always available
+        today = date.today()
+        months_set.add((today.year, today.month))
+        
+        history_months = sorted(list(months_set), key=lambda x: (x[0], x[1]), reverse=True)
+        
+        month_names = {
+            1: 'January', 2: 'February', 3: 'March', 4: 'April',
+            5: 'May', 6: 'June', 7: 'July', 8: 'August',
+            9: 'September', 10: 'October', 11: 'November', 12: 'December'
+        }
+        
+        return render_template('history.html', 
+                               current_user=current_user,
+                               history_months=history_months,
+                               month_names=month_names)
+   
     @app.route('/api/add-meal', methods=['POST'])
     @manager_required
     def add_meal():
@@ -346,28 +695,53 @@ def create_app(config_name='development'):
         """API endpoint to add expense for meal rate calculation"""
         amount = request.json.get('amount', 0)
         description = request.json.get('description', '').strip()
+        user_id = request.json.get('user_id')
+        expense_date_str = request.json.get('date')
         
-        if amount <= 0:
+        # Handle custom date or default to today
+        expense_date = datetime.utcnow()
+        if expense_date_str:
+            try:
+                # Convert string 'YYYY-MM-DD' to datetime
+                expense_date = datetime.strptime(expense_date_str, '%Y-%m-%d')
+            except ValueError:
+                return {'success': False, 'message': 'Invalid date format'}, 400
+        
+        # Check if amount is negative, which we allow for selling leftover stock
+        # But we don't allow zero
+        if float(amount) == 0:
             return {'success': False, 'message': 'Invalid amount'}, 400
         
         if not description:
             return {'success': False, 'message': 'Description is required'}, 400
+            
+        # Validate user_id if provided
+        if user_id:
+            user_exists = User.query.get(user_id)
+            if not user_exists:
+                return {'success': False, 'message': 'Selected member does not exist'}, 400
+        else:
+            user_id = None
         
         expense = Expense(
             amount=float(amount),
-            description=description
+            description=description,
+            user_id=user_id,
+            date=expense_date
         )
         
         db.session.add(expense)
         db.session.commit()
         
-        # Recalculate meal rate
-        new_rate = get_current_meal_rate()
+        # Recalculate meal rate for that specific month
+        year = expense_date.year
+        month = expense_date.month
+        new_rate = get_monthly_meal_rate(year, month)
         
         # Also save the rate to meal_rates table for history
         meal_rate = MealRate(
             rate=new_rate,
-            effective_date=date.today(),
+            effective_date=expense_date.date(),
             description=f"Auto-calculated from expenses"
         )
         db.session.add(meal_rate)
@@ -377,12 +751,12 @@ def create_app(config_name='development'):
             'success': True,
             'message': 'Expense added successfully',
             'new_rate': new_rate,
-            'total_expenses': get_hostel_stats()['total_expenses']
+            'total_expenses': get_monthly_hostel_stats(year, month)['total_expenses']
         }
 
 
     @app.route('/api/get-expenses', methods=['GET'])
-    @manager_required
+    @login_required
     def get_expenses():
         """API endpoint to get all expenses"""
         expenses = Expense.query.order_by(Expense.date.desc()).all()
@@ -394,6 +768,8 @@ def create_app(config_name='development'):
                     'id': e.id,
                     'amount': e.amount,
                     'description': e.description,
+                    'user_id': e.user_id,
+                    'user_name': e.user.name if e.user else 'System',
                     'date': e.date.strftime('%Y-%m-%d %H:%M')
                 } for e in expenses
             ]
@@ -474,10 +850,9 @@ def create_app(config_name='development'):
         session.clear()
         flash('You have been logged out', 'info')
         return redirect(url_for('login'))
-    
-    return app
+
     @app.route('/api/get-all-transactions', methods=['GET'])
-    @manager_required
+    @login_required
     def get_all_transactions():
         """API endpoint to get all transactions for all users"""
         transactions = Transaction.query.order_by(Transaction.date.desc()).limit(100).all()
@@ -496,11 +871,12 @@ def create_app(config_name='development'):
                 } for t in transactions
             ]
         }
+    
+    return app
 
-# Replace the bottom section (around line 254-256)
 if __name__ == '__main__':
     app = create_app('development')
     # Remove this line:
-    app.run(debug=True, host='0.0.0.0', port=5000)
+    app.run(debug=True, host='0.0.0.0', port=5900)
     # Add this instead:
     # serve(app, host='127.0.0.1', port=5000)

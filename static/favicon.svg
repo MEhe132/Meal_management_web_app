@@ -1,0 +1,37 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64">
+  <defs>
+    <!-- Indigo to Blue Gradient for Plate -->
+    <linearGradient id="plateGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#6366f1" />
+      <stop offset="100%" stop-color="#3b82f6" />
+    </linearGradient>
+    <!-- Silver to Slate Gradient for Spoon -->
+    <linearGradient id="spoonGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#cbd5e1" />
+      <stop offset="50%" stop-color="#94a3b8" />
+      <stop offset="100%" stop-color="#475569" />
+    </linearGradient>
+    <!-- Soft Drop Shadow for premium look -->
+    <filter id="dropShadow" x="-10%" y="-10%" width="120%" height="120%">
+      <feDropShadow dx="1" dy="2" stdDeviation="1.5" flood-opacity="0.15" />
+    </filter>
+  </defs>
+
+  <!-- Plate Shadow and Outer Ring -->
+  <circle cx="26" cy="32" r="22" fill="none" stroke="url(#plateGrad)" stroke-width="3" filter="url(#dropShadow)" />
+  
+  <!-- Plate Inner Basin -->
+  <circle cx="26" cy="32" r="18" fill="url(#plateGrad)" opacity="0.15" />
+  
+  <!-- Plate Inner Rim Detail -->
+  <circle cx="26" cy="32" r="13" fill="none" stroke="url(#plateGrad)" stroke-width="1.5" stroke-dasharray="3 3" opacity="0.6" />
+
+  <!-- Spoon Head (Bowl of the spoon) -->
+  <path d="M48,15 C44,15 42,20 42,26 C42,32 44,35 48,35 C52,35 54,32 54,26 C54,20 52,15 48,15 Z" fill="url(#spoonGrad)" filter="url(#dropShadow)" />
+  
+  <!-- Spoon Handle -->
+  <path d="M48,35 L48,51" stroke="url(#spoonGrad)" stroke-width="3" stroke-linecap="round" filter="url(#dropShadow)" />
+  
+  <!-- Spoon Neck Detail Accent -->
+  <path d="M46.5,35.5 L49.5,35.5" stroke="#94a3b8" stroke-width="1" />
+</svg>

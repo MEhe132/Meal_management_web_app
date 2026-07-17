@@ -1,0 +1,47 @@
+{% extends "base.html" %}
+
+{% block title %}History - Plate &amp; Spoon{% endblock %}
+
+{% block content %}
+<div class="space-y-6">
+    <!-- Header -->
+    <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div>
+            <h1 class="text-2xl md:text-3xl font-extrabold text-slate-900 dark:text-slate-50 tracking-tight">Sheet History</h1>
+            <p class="text-slate-500 dark:text-slate-400 text-sm mt-1">
+                View previous months' meal data and transactions.
+            </p>
+        </div>
+    </div>
+
+    <!-- History Grid -->
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        {% for year, month in history_months %}
+        <a href="{{ url_for('dashboard', month=month, year=year) }}" 
+           class="group block bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-6 shadow-sm hover:shadow-md transition-all duration-200 hover:-translate-y-1">
+            <div class="flex items-center justify-between">
+                <div class="flex items-center space-x-4">
+                    <div class="w-12 h-12 bg-indigo-50 dark:bg-indigo-950/30 text-indigo-600 dark:text-indigo-400 rounded-xl flex items-center justify-center text-xl shadow-inner group-hover:scale-110 transition-transform">
+                        📅
+                    </div>
+                    <div>
+                        <h3 class="text-lg font-bold text-slate-900 dark:text-slate-100">{{ month_names[month] }}</h3>
+                        <p class="text-sm text-slate-500 dark:text-slate-400">{{ year }}</p>
+                    </div>
+                </div>
+                <div class="text-slate-400 group-hover:text-indigo-500 transition-colors">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+                    </svg>
+                </div>
+            </div>
+        </a>
+        {% else %}
+        <div class="col-span-full py-12 text-center text-slate-500 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl">
+            <div class="text-4xl mb-3">📭</div>
+            <p>No history available yet.</p>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+{% endblock %}

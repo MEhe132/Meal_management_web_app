@@ -1,0 +1,92 @@
+{% extends "base.html" %}
+
+{% block title %}Member List - Plate &amp; Spoon{% endblock %}
+
+{% block content %}
+<div class="space-y-6">
+    <!-- Header -->
+    <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div>
+            <h1 class="text-2xl md:text-3xl font-extrabold text-slate-900 dark:text-slate-50 tracking-tight">Member List</h1>
+            <p class="text-slate-500 dark:text-slate-400 text-sm mt-1">
+                View all registered hostel residents and their auto-assigned unique IDs.
+            </p>
+        </div>
+        <div class="flex items-center space-x-2 text-xs text-slate-400 dark:text-slate-500 bg-white dark:bg-slate-900 px-3 py-1.5 border border-slate-150 dark:border-slate-800 rounded-full self-start shadow-sm">
+            <span>Total Members: <strong>{{ members|length }}</strong></span>
+        </div>
+    </div>
+
+    <!-- Member Register Grid/Table -->
+    <div class="bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 rounded-2xl shadow-sm overflow-hidden">
+        <div class="px-6 py-5 border-b border-slate-100 dark:border-slate-800">
+            <h2 class="text-base font-bold text-slate-800 dark:text-slate-200">Resident Directory</h2>
+        </div>
+
+        <div class="overflow-x-auto">
+            <table class="w-full text-left text-sm">
+                <thead>
+                    <tr class="bg-slate-50/70 dark:bg-slate-800/50 border-b border-slate-100 dark:border-slate-800 text-slate-500 dark:text-slate-400">
+                        <th class="px-6 py-4 font-bold text-xs uppercase tracking-wider">Unique ID</th>
+                        <th class="px-6 py-4 font-bold text-xs uppercase tracking-wider">Full Name</th>
+                        <th class="px-6 py-4 font-bold text-xs uppercase tracking-wider">Email Address</th>
+                        <th class="px-6 py-4 font-bold text-xs uppercase tracking-wider text-center">System Role</th>
+                        <th class="px-6 py-4 font-bold text-xs uppercase tracking-wider text-center">Status</th>
+                        <th class="px-6 py-4 font-bold text-xs uppercase tracking-wider">Joined Date</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-slate-100 dark:divide-slate-800">
+                    {% for member in members %}
+                    <tr class="hover:bg-slate-50/50 dark:hover:bg-slate-800/30 transition duration-150">
+                        <!-- Unique auto-provided ID -->
+                        <td class="px-6 py-4.5 whitespace-nowrap">
+                            <span class="px-3 py-1 bg-indigo-50 dark:bg-indigo-950/20 text-indigo-700 dark:text-indigo-400 border border-indigo-200/40 dark:border-indigo-900/40 rounded-lg text-xs font-black">
+                                MEM-{{ "%04d"|format(member.id) }}
+                            </span>
+                        </td>
+                        
+                        <td class="px-6 py-4.5 font-bold text-slate-800 dark:text-slate-200 whitespace-nowrap">
+                            {{ member.name }}
+                        </td>
+                        
+                        <td class="px-6 py-4.5 text-slate-650 dark:text-slate-400 whitespace-nowrap">
+                            {{ member.email }}
+                        </td>
+                        
+                        <td class="px-6 py-4.5 text-center whitespace-nowrap">
+                            {% if member.is_manager() %}
+                            <span class="px-2.5 py-0.5 bg-amber-50 dark:bg-amber-955/20 text-amber-700 dark:text-amber-400 border border-amber-200/50 dark:border-amber-900/50 rounded-full text-[10px] font-bold uppercase">
+                                Manager
+                            </span>
+                            {% else %}
+                            <span class="px-2.5 py-0.5 bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 border border-slate-200/20 dark:border-slate-700 rounded-full text-[10px] font-bold uppercase">
+                                Member
+                            </span>
+                            {% endif %}
+                        </td>
+                        
+                        <td class="px-6 py-4.5 text-center whitespace-nowrap">
+                            {% if member.is_active %}
+                            <span class="inline-flex items-center space-x-1 text-green-600 dark:text-green-400 text-xs font-bold">
+                                <span class="w-1.5 h-1.5 rounded-full bg-green-500"></span>
+                                <span>Active</span>
+                            </span>
+                            {% else %}
+                            <span class="inline-flex items-center space-x-1 text-slate-400 dark:text-slate-500 text-xs font-medium">
+                                <span class="w-1.5 h-1.5 rounded-full bg-slate-400"></span>
+                                <span>Inactive</span>
+                            </span>
+                            {% endif %}
+                        </td>
+                        
+                        <td class="px-6 py-4.5 text-slate-450 dark:text-slate-500 whitespace-nowrap text-xs">
+                            {{ member.created_at.strftime('%b %d, %Y') }}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}

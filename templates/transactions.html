@@ -1,0 +1,374 @@
+{% extends "base.html" %}
+
+{% block title %}Transactions &amp; Expenses - Plate &amp; Spoon{% endblock %}
+
+{% block content %}
+<div class="space-y-6">
+    <!-- Header -->
+    <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div>
+            <h1 class="text-2xl md:text-3xl font-extrabold text-slate-900 dark:text-slate-50 tracking-tight">Transactions &amp; Expenses</h1>
+            <p class="text-slate-500 dark:text-slate-400 text-sm mt-1">
+                Audited logs of hostel expenses, purchases, and member deposits.
+            </p>
+        </div>
+        
+        <!-- Manager action buttons -->
+        {% if current_user.is_manager() %}
+        <div class="flex flex-wrap gap-2 self-start">
+            <button onclick="openModal('addMoneyModal')" class="px-4 py-2.5 bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-600 hover:to-emerald-600 text-white rounded-xl font-bold text-xs shadow-sm hover:shadow transition">
+                💵 Add Member Money
+            </button>
+            <button onclick="openModal('addExpenseModal')" class="px-4 py-2.5 bg-gradient-to-r from-indigo-500 to-blue-500 hover:from-indigo-600 hover:to-blue-600 text-white rounded-xl font-bold text-xs shadow-sm hover:shadow transition">
+                🛒 Add Hostel Expense
+            </button>
+        </div>
+        {% endif %}
+    </div>
+
+    <!-- Toggle Tabs -->
+    <div class="border-b border-slate-200 dark:border-slate-800 flex space-x-6 text-sm font-bold">
+        <button id="tabExpensesBtn" onclick="switchTab('expenses')" class="pb-3 border-b-2 border-indigo-650 text-indigo-600 dark:text-indigo-400">
+            Hostel Purchase &amp; Expense History 🛒
+        </button>
+        <button id="tabTransactionsBtn" onclick="switchTab('transactions')" class="pb-3 border-b-2 border-transparent text-slate-550 dark:text-slate-450 hover:text-slate-800 dark:hover:text-slate-200">
+            Member Deposits/Withdrawals 💳
+        </button>
+    </div>
+
+    <!-- TAB 1: HOSTEL EXPENSES -->
+    <div id="expensesTab" class="space-y-4">
+        <div class="bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 rounded-2xl shadow-sm overflow-hidden">
+            <div class="px-6 py-5 border-b border-slate-100 dark:border-slate-800">
+                <h2 class="text-base font-bold text-slate-800 dark:text-slate-200">Hostel Expense Register</h2>
+            </div>
+            
+            <div class="overflow-x-auto">
+                <table class="w-full text-left text-sm">
+                    <thead>
+                        <tr class="bg-slate-50/70 dark:bg-slate-800/50 border-b border-slate-100 dark:border-slate-800 text-slate-500 dark:text-slate-400">
+                            <th class="px-6 py-4 font-bold text-xs uppercase tracking-wider">Date</th>
+                            <th class="px-6 py-4 font-bold text-xs uppercase tracking-wider">Paid By (User Associated)</th>
+                            <th class="px-6 py-4 font-bold text-xs uppercase tracking-wider">Description</th>
+                            <th class="px-6 py-4 font-bold text-xs uppercase tracking-wider text-right">Amount</th>
+                            {% if current_user.is_manager() %}
+                            <th class="px-6 py-4 font-bold text-xs uppercase tracking-wider text-center">Actions</th>
+                            {% endif %}
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-slate-100 dark:divide-slate-800">
+                        {% for expense in expenses %}
+                        <tr class="hover:bg-slate-50/50 dark:hover:bg-slate-800/30 transition duration-155">
+                            <td class="px-6 py-4 text-slate-500 dark:text-slate-400 whitespace-nowrap">{{ expense.date.strftime('%Y-%m-%d %H:%M') }}</td>
+                            <td class="px-6 py-4 font-semibold text-slate-900 dark:text-slate-100 whitespace-nowrap">
+                                {{ expense.user.name if expense.user else "System" }}
+                            </td>
+                            <td class="px-6 py-4 text-slate-700 dark:text-slate-300">
+                                <span class="px-2 py-0.5 bg-slate-100 dark:bg-slate-800 rounded-md text-xs font-medium">{{ expense.description }}</span>
+                            </td>
+                            <td class="px-6 py-4 text-right font-extrabold text-slate-900 dark:text-slate-100">৳{{ "%.2f"|format(expense.amount) }}</td>
+                            {% if current_user.is_manager() %}
+                            <td class="px-6 py-4 text-center whitespace-nowrap">
+                                <button onclick="deleteExpense({{ expense.id }})" class="p-1.5 bg-red-50 text-red-700 dark:bg-red-950/20 dark:text-red-400 border border-red-200/50 dark:border-red-900/40 hover:bg-red-100 rounded-lg transition text-xs font-bold">
+                                    🗑️ Delete
+                                </button>
+                            </td>
+                            {% endif %}
+                        </tr>
+                        {% endfor %}
+                        {% if expenses|length == 0 %}
+                        <tr>
+                            <td colspan="5" class="px-6 py-8 text-center text-slate-450 dark:text-slate-500">No expenses recorded yet.</td>
+                        </tr>
+                        {% endif %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- TAB 2: MEMBER TRANSACTIONS -->
+    <div id="transactionsTab" class="space-y-4 hidden">
+        <div class="bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 rounded-2xl shadow-sm overflow-hidden">
+            <div class="px-6 py-5 border-b border-slate-100 dark:border-slate-800">
+                <h2 class="text-base font-bold text-slate-800 dark:text-slate-200">Member Deposits/Withdrawals Register</h2>
+            </div>
+            
+            <div class="overflow-x-auto">
+                <table class="w-full text-left text-sm">
+                    <thead>
+                        <tr class="bg-slate-50/70 dark:bg-slate-800/50 border-b border-slate-100 dark:border-slate-800 text-slate-500 dark:text-slate-400">
+                            <th class="px-6 py-4 font-bold text-xs uppercase tracking-wider">Date</th>
+                            <th class="px-6 py-4 font-bold text-xs uppercase tracking-wider">Member</th>
+                            <th class="px-6 py-4 font-bold text-xs uppercase tracking-wider text-center">Type</th>
+                            <th class="px-6 py-4 font-bold text-xs uppercase tracking-wider">Notes</th>
+                            <th class="px-6 py-4 font-bold text-xs uppercase tracking-wider text-right">Amount</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-slate-100 dark:divide-slate-800">
+                        {% for trans in transactions %}
+                        {% set is_deposit = trans.type == 'deposit' %}
+                        <tr class="hover:bg-slate-50/50 dark:hover:bg-slate-800/30 transition duration-155">
+                            <td class="px-6 py-4 text-slate-500 dark:text-slate-400 whitespace-nowrap">{{ trans.date.strftime('%Y-%m-%d %H:%M') }}</td>
+                            <td class="px-6 py-4 font-semibold text-slate-900 dark:text-slate-100 whitespace-nowrap">{{ trans.user.name }}</td>
+                            <td class="px-6 py-4 text-center whitespace-nowrap">
+                                <span class="inline-block px-2.5 py-0.5 rounded-full text-[10px] uppercase font-bold tracking-wider {% if is_deposit %}bg-green-50 text-green-700 dark:bg-green-950/20 dark:text-green-400{% else %}bg-red-50 text-red-700 dark:bg-red-950/20 dark:text-red-400{% endif %}">
+                                    {{ trans.type }}
+                                </span>
+                            </td>
+                            <td class="px-6 py-4 text-slate-600 dark:text-slate-400 text-xs">{{ trans.description if trans.description else "-" }}</td>
+                            <td class="px-6 py-4 text-right font-black {% if is_deposit %}text-green-600 dark:text-green-400{% else %}text-red-600 dark:text-red-400{% endif %} whitespace-nowrap">
+                                {% if is_deposit %}+{% else %}-{% endif %}৳{{ "%.2f"|format(trans.amount) }}
+                            </td>
+                        </tr>
+                        {% endfor %}
+                        {% if transactions|length == 0 %}
+                        <tr>
+                            <td colspan="5" class="px-6 py-8 text-center text-slate-450 dark:text-slate-500">No transactions recorded yet.</td>
+                        </tr>
+                        {% endif %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ================== MODAL: ADD MONEY ================== -->
+<div id="addMoneyModal" class="hidden fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4 transition-all">
+    <div class="bg-white dark:bg-slate-900 rounded-2xl shadow-premium border border-slate-100 dark:border-slate-800 p-6 md:p-8 max-w-md w-full animate-scale-up">
+        <div class="flex items-center space-x-3 mb-4">
+            <span class="text-2xl">💵</span>
+            <h2 class="text-xl font-bold text-slate-900 dark:text-slate-100">Add Member Money</h2>
+        </div>
+        
+        <div class="space-y-4">
+            <div>
+                <label class="block text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-2">Member</label>
+                <select id="moneyUserId" class="w-full px-4 py-2.5 border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 rounded-xl focus:outline-none focus:ring-2 focus:ring-green-500 text-slate-950 dark:text-slate-100 transition duration-150">
+                    <option value="">-- Select a member --</option>
+                    {% for u in all_users %}
+                    <option value="{{ u.id }}">{{ u.name }} ({{ u.email }})</option>
+                    {% endfor %}
+                </select>
+            </div>
+            
+            <div class="grid grid-cols-2 gap-4">
+                <div>
+                    <label class="block text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-2">Amount (৳)</label>
+                    <input type="number" id="moneyAmount" min="1" placeholder="e.g. 500" class="w-full px-4 py-2.5 border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 rounded-xl focus:outline-none focus:ring-2 focus:ring-green-500 text-slate-950 dark:text-slate-100 transition">
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-2">Type</label>
+                    <select id="moneyType" class="w-full px-4 py-2.5 border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 rounded-xl focus:outline-none focus:ring-2 focus:ring-green-500 text-slate-950 dark:text-slate-100 transition duration-150">
+                        <option value="deposit">Deposit</option>
+                        <option value="withdrawal">Withdrawal</option>
+                    </select>
+                </div>
+            </div>
+
+            <div>
+                <label class="block text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-2">Description / Notes</label>
+                <input type="text" id="moneyDescription" placeholder="e.g. Cash payment / refund" class="w-full px-4 py-2.5 border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 rounded-xl focus:outline-none focus:ring-2 focus:ring-green-500 text-slate-950 dark:text-slate-100 transition">
+            </div>
+
+            <div class="flex gap-4 pt-2">
+                <button onclick="submitMoney()" class="flex-1 px-4 py-2.5 bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-600 hover:to-emerald-600 text-white rounded-xl font-semibold shadow-sm hover:shadow transition duration-200">
+                    Record Money
+                </button>
+                <button onclick="closeModal('addMoneyModal')" class="flex-1 px-4 py-2.5 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 rounded-xl font-semibold transition duration-200">
+                    Cancel
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ================== MODAL: ADD EXPENSE ================== -->
+<div id="addExpenseModal" class="hidden fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4 transition-all">
+    <div class="bg-white dark:bg-slate-900 rounded-2xl shadow-premium border border-slate-100 dark:border-slate-800 p-6 md:p-8 max-w-md w-full animate-scale-up">
+        <div class="flex items-center space-x-3 mb-4">
+            <span class="text-2xl">🛒</span>
+            <h2 class="text-xl font-bold text-slate-900 dark:text-slate-100">Add Hostel Purchase Expense</h2>
+        </div>
+        
+        <div class="space-y-4">
+            <div class="grid grid-cols-2 gap-4">
+                <div>
+                    <label class="block text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-2">Amount (৳) (Can be negative)</label>
+                    <input type="number" id="expenseAmount" placeholder="e.g. 1500 or -500" class="w-full px-4 py-2.5 border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 text-slate-950 dark:text-slate-100 transition">
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-2">Paid By</label>
+                    <select id="expenseUserId" class="w-full px-4 py-2.5 border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 text-slate-950 dark:text-slate-100 transition duration-150">
+                        <option value="">System / Shared</option>
+                        {% for u in all_users %}
+                        <option value="{{ u.id }}">{{ u.name }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+            </div>
+
+            <div>
+                <label class="block text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-2">Expense Date (Optional, defaults to today)</label>
+                <input type="date" id="expenseDate" class="w-full px-4 py-2.5 border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 text-slate-950 dark:text-slate-100 transition">
+            </div>
+
+            <div>
+                <label class="block text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-2">What purchased? / Description</label>
+                <input type="text" id="expenseDescription" placeholder="e.g. Chicken 10kg, Potato 20kg" class="w-full px-4 py-2.5 border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 text-slate-950 dark:text-slate-100 transition">
+            </div>
+
+            <div class="flex gap-4 pt-2">
+                <button onclick="submitExpense()" class="flex-1 px-4 py-2.5 bg-gradient-to-r from-indigo-500 to-blue-500 hover:from-indigo-600 hover:to-blue-600 text-white rounded-xl font-semibold shadow-sm hover:shadow transition duration-200">
+                    Record Expense
+                </button>
+                <button onclick="closeModal('addExpenseModal')" class="flex-1 px-4 py-2.5 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 rounded-xl font-semibold transition duration-200">
+                    Cancel
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    // Tab switching
+    function switchTab(tab) {
+        const expensesBtn = document.getElementById('tabExpensesBtn');
+        const transactionsBtn = document.getElementById('tabTransactionsBtn');
+        const expensesTab = document.getElementById('expensesTab');
+        const transactionsTab = document.getElementById('transactionsTab');
+
+        if (tab === 'expenses') {
+            expensesBtn.className = 'pb-3 border-b-2 border-indigo-650 text-indigo-650 dark:text-indigo-400';
+            transactionsBtn.className = 'pb-3 border-b-2 border-transparent text-slate-550 dark:text-slate-450 hover:text-slate-800 dark:hover:text-slate-200';
+            expensesTab.classList.remove('hidden');
+            transactionsTab.classList.add('hidden');
+        } else {
+            transactionsBtn.className = 'pb-3 border-b-2 border-indigo-650 text-indigo-650 dark:text-indigo-400';
+            expensesBtn.className = 'pb-3 border-b-2 border-transparent text-slate-550 dark:text-slate-450 hover:text-slate-800 dark:hover:text-slate-200';
+            transactionsTab.classList.remove('hidden');
+            expensesTab.classList.add('hidden');
+        }
+    }
+
+    // Modal helpers
+    function openModal(id) {
+        document.getElementById(id).classList.remove('hidden');
+    }
+
+    function closeModal(id) {
+        document.getElementById(id).classList.add('hidden');
+    }
+
+    // Modal closing on clicking outside
+    ['addMoneyModal', 'addExpenseModal'].forEach(id => {
+        const modal = document.getElementById(id);
+        if (modal) {
+            modal.addEventListener('click', function(e) {
+                if (e.target === this) closeModal(id);
+            });
+        }
+    });
+
+    // Record Money submit
+    function submitMoney() {
+        const userId = document.getElementById('moneyUserId').value;
+        const amount = document.getElementById('moneyAmount').value;
+        const type = document.getElementById('moneyType').value;
+        const desc = document.getElementById('moneyDescription').value.trim();
+
+        if (!userId || !amount || amount <= 0) {
+            alert('⚠️ Please select a member and enter a positive amount.');
+            return;
+        }
+
+        fetch('/api/add-money', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                user_id: parseInt(userId),
+                amount: parseFloat(amount),
+                type: type,
+                description: desc
+            })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                alert('✅ Money entry recorded!');
+                window.location.reload();
+            } else {
+                alert('❌ Error: ' + data.message);
+            }
+        })
+        .catch(err => {
+            console.error(err);
+            alert('❌ API request failed.');
+        });
+    }
+
+    // Record Expense submit
+    function submitExpense() {
+        const amount = document.getElementById('expenseAmount').value;
+        const desc = document.getElementById('expenseDescription').value.trim();
+        const userId = document.getElementById('expenseUserId').value;
+        const expenseDate = document.getElementById('expenseDate').value;
+
+        if (!amount || amount == 0 || !desc) {
+            alert('⚠️ Please enter a valid non-zero amount and description.');
+            return;
+        }
+
+        fetch('/api/add-expense', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                amount: parseFloat(amount),
+                description: desc,
+                user_id: userId ? parseInt(userId) : null,
+                date: expenseDate ? expenseDate : null
+            })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                alert('✅ Expense recorded successfully!');
+                window.location.reload();
+            } else {
+                alert('❌ Error: ' + data.message);
+            }
+        })
+        .catch(err => {
+            console.error(err);
+            alert('❌ API request failed.');
+        });
+    }
+
+    // Delete expense helper (manager only)
+    function deleteExpense(expenseId) {
+        if (!confirm('⚠️ Are you sure you want to delete this expense? This will recalculate the live meal rates.')) {
+            return;
+        }
+
+        fetch(`/api/delete-expense/${expenseId}`, {
+            method: 'DELETE'
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                alert('✅ Expense deleted successfully.');
+                window.location.reload();
+            } else {
+                alert('❌ Error: ' + data.message);
+            }
+        })
+        .catch(err => {
+            console.error(err);
+            alert('❌ Request failed.');
+        });
+    }
+</script>
+{% endblock %}

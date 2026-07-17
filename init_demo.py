@@ -3,7 +3,7 @@ Initialize Demo Data for Testing
 Run this script to populate the database with sample data
 """
 from app import create_app
-from models import db, User, Meal, Transaction, MealRate
+from models import db, User, Meal, Transaction, MealRate, Expense
 from datetime import date, timedelta
 
 def init_demo_data():
@@ -15,7 +15,7 @@ def init_demo_data():
         db.drop_all()
         db.create_all()
         
-        print("🔄 Clearing and recreating database...")
+        print("[DB] Clearing and recreating database...")
         
         # Create Manager
         manager = User(
@@ -26,7 +26,7 @@ def init_demo_data():
         )
         manager.set_password('password')
         db.session.add(manager)
-        print("✅ Manager created: manager@example.com")
+        print("[OK] Manager created: manager@example.com")
         
         # Create Members
         member_data = [
@@ -47,7 +47,7 @@ def init_demo_data():
             member.set_password('password')
             db.session.add(member)
             members.append(member)
-            print(f"✅ Member created: {email}")
+            print(f"[OK] Member created: {email}")
         
         db.session.commit()
         
@@ -58,7 +58,7 @@ def init_demo_data():
             description='Initial meal rate'
         )
         db.session.add(meal_rate)
-        print("✅ Meal rate set: ৳50")
+        print("[OK] Meal rate set: 50 BDT")
         
         # Create sample transactions for members AND manager
         all_users = [manager] + members
@@ -73,27 +73,30 @@ def init_demo_data():
             db.session.add(transaction)
         
         db.session.commit()
-        print("✅ Initial deposits added: ৳5000 per user")
+        print("[OK] Initial deposits added: 5000 BDT per user")
         
         # Create sample meal data for the past 5 days for ALL users
         for i in range(5):
             current_date = date.today() - timedelta(days=4-i)
             for user in all_users:
-                meal_count = 2.5 if i % 2 == 0 else 2.0
+                is_even = (i % 2 == 0)
                 meal = Meal(
                     user_id=user.id,
                     date=current_date,
-                    meal_count=meal_count
+                    breakfast=is_even,
+                    lunch=True,
+                    dinner=True
                 )
+                meal.update_meal_count()
                 db.session.add(meal)
         
         db.session.commit()
-        print("✅ Sample meal data added for past 5 days (including manager)")
+        print("[OK] Sample meal data added for past 5 days (including manager)")
         
         print("\n" + "="*50)
-        print("✨ DEMO DATA INITIALIZED SUCCESSFULLY!")
+        print("DEMO DATA INITIALIZED SUCCESSFULLY!")
         print("="*50)
-        print("\n📝 TEST CREDENTIALS:\n")
+        print("\nTEST CREDENTIALS:\n")
         print("Manager Account:")
         print("  Email: manager@example.com")
         print("  Password: password")
@@ -101,30 +104,32 @@ def init_demo_data():
         print("  NOTE: Manager is also included as a meal member!")
         print("\nMember Accounts:")
         for name, email in member_data:
-            print(f"  • {name}")
+            print(f"  * {name}")
             print(f"    Email: {email}")
             print(f"    Password: password")
-        print("\n🚀 Run 'python app.py' to start the application!")
-        print("📱 Visit http://localhost:5000 in your browser")
-    # After creating meals, add sample expenses
-    print("📊 Adding sample expenses...")
-    sample_expenses = [
-        (2000, "Rice - 50kg"),
-        (1500, "Vegetables - Weekly supply"),
-        (800, "Cooking oil"),
-        (1200, "Chicken - 10kg"),
-        (500, "Spices and condiments"),
-    ]
+        print("\nRun 'python app.py' to start the application!")
+        print("Visit http://localhost:5050 in your browser")
+        
+        # After creating meals, add sample expenses
+        print("[DB] Adding sample expenses...")
+        sample_expenses = [
+            (2000, "Rice - 50kg"),
+            (1500, "Vegetables - Weekly supply"),
+            (800, "Cooking oil"),
+            (1200, "Chicken - 10kg"),
+            (500, "Spices and condiments"),
+        ]
 
-    for amount, desc in sample_expenses:
-        expense = Expense(
-            amount=amount,
-            description=desc
-        )
-        db.session.add(expense)
+        for amount, desc in sample_expenses:
+            expense = Expense(
+                amount=amount,
+                description=desc,
+                user_id=manager.id  # Assign managers or select members
+            )
+            db.session.add(expense)
 
-    db.session.commit()
-    print(f"✅ {len(sample_expenses)} sample expenses added")
+        db.session.commit()
+        print(f"[OK] {len(sample_expenses)} sample expenses added")
 
 if __name__ == '__main__':
     init_demo_data()
