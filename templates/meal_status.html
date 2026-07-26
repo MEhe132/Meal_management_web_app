@@ -203,22 +203,18 @@
             } else {
                 // Revert checkbox state on failure
                 checkbox.checked = !checked;
-                alert('❌ Error: ' + data.message);
+                showToast('Error: ' + data.message, 'danger');
             }
         })
         .catch(error => {
             console.error('Error:', error);
             checkbox.checked = !checked;
-            alert('❌ An error occurred while updating status.');
+            showToast('An error occurred while updating status.', 'danger');
         });
     }
 
     // Toggle manager lock
     function toggleLock(dateStr, mealType, shouldLock, button) {
-        if (!confirm(`Are you sure you want to ${shouldLock ? 'LOCK' : 'UNLOCK'} ${mealType} editing permissions for ${dateStr}?`)) {
-            return;
-        }
-
         fetch('/api/toggle-meal-lock', {
             method: 'POST',
             headers: {
@@ -233,15 +229,15 @@
         .then(response => response.json())
         .then(data => {
             if (data.success) {
-                // Reload page to reflect updated lock states and disable inputs
-                window.location.reload();
+                showToast(data.message, 'success');
+                setTimeout(() => window.location.reload(), 400);
             } else {
-                alert('❌ Error: ' + data.message);
+                showToast('Error: ' + data.message, 'danger');
             }
         })
         .catch(error => {
             console.error('Error:', error);
-            alert('❌ An error occurred while changing lock status.');
+            showToast('An error occurred while changing lock status.', 'danger');
         });
     }
 </script>

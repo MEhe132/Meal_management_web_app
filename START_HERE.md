@@ -53,12 +53,12 @@ python app.py
 
 You should see:
 ```
-Running on http://127.0.0.1:5000/
+Running on http://127.0.0.1:5900/
 ```
 
 ### Step 6: Open Browser
 ```
-http://localhost:5000
+http://localhost:5900
 ```
 
 ---
@@ -232,8 +232,8 @@ hostel_meal_system/
 pip install -r requirements.txt
 ```
 
-### "Port 5000 already in use"
-Edit `app.py`, change: `port=5001`
+### "Port 5900 already in use"
+Edit `app.py`, change: `port=5901`
 
 ### "Database locked"
 Restart Flask app or close other connections

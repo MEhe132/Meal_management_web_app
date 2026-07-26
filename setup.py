@@ -76,7 +76,7 @@ def main():
     else:
         print(f"1. Activate virtual environment: source {venv_name}/bin/activate")
     print("2. Run: python app.py")
-    print("3. Open: http://localhost:5000")
+    print("3. Open: http://localhost:5900")
     
     print("\n📝 Default Credentials:")
     print("   Manager: manager@example.com / password")

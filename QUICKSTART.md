@@ -49,7 +49,7 @@ python app.py
 
 ## 🌐 Accessing the Application
 
-Open your browser at: **http://localhost:5000** (or http://127.0.0.1:5000)
+Open your browser at: **http://localhost:5900** (or http://127.0.0.1:5900)
 
 ---
 
@@ -89,10 +89,10 @@ Ensure your virtual environment is activated and run:
 pip install -r requirements.txt
 ```
 
-### Error: `Port 5000 already in use`
+### Error: `Port 5900 already in use`
 Change the port at the bottom of `app.py`:
 ```python
-app.run(debug=True, host='127.0.0.1', port=5001)
+app.run(debug=True, host='127.0.0.1', port=5901)
 ```
 
 ### How to reset database completely:

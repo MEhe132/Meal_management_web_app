@@ -126,7 +126,7 @@ python init_demo.py
 python app.py
 ```
 
-Open your browser at **http://localhost:5000** (or http://127.0.0.1:5000).
+Open your browser at **http://localhost:5900** (or http://127.0.0.1:5900).
 
 ### 🔑 Default Demo Credentials
 - **Manager**: `manager@example.com` / `password`
@@ -165,8 +165,10 @@ Open your browser at **http://localhost:5000** (or http://127.0.0.1:5000).
 
 To prevent browser freeze / thread lock when navigating rapidly:
 1. **Streaming Connections**: Background SSE connections close cleanly on `beforeunload` to free WSGI threads.
-2. **Server Concurrency**: In multi-user setups, launch with Waitress or Gunicorn with multiple worker threads.
-3. **Database Caching**: User session data is cached per request to maintain minimal SQL latency.
+2. **Thread-Safe SSE Announcer**: `MessageAnnouncer` utilizes a `threading.Lock()` to prevent race conditions during rapid client disconnects/reconnects.
+3. **Optimized SQL Query Architecture**: Uses `get_bulk_user_monthly_stats` and `get_bulk_user_balances` to aggregate user stats in 3-4 bulk queries instead of 100+ individual queries per dashboard load.
+4. **Database Indexing**: Comprehensive SQLite indexes (`idx_meals_user_date`, `idx_transactions_user_type`, `idx_expenses_date`, `idx_chat_created_at`) ensure sub-millisecond filtering.
+5. **Clean Schema Inspection**: Database startup migrations inspect table columns cleanly with `sqlalchemy.inspect` without throwing or rolling back failing SQL statements.
 
 ---
 

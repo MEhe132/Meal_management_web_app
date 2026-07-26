@@ -64,11 +64,11 @@ Before Testing:
    
    Expected:
    WARNING in app.runserver (werkzeug): This is a development server...
-   Running on http://127.0.0.1:5000/
+   Running on http://127.0.0.1:5900/
 
 4. Browser
    Use: Chrome, Firefox, Safari, or Edge
-   Open: http://localhost:5000
+   Open: http://localhost:5900
 """
 
 # ============================================================================
@@ -80,7 +80,7 @@ TEST 1.1: Member Login
 ───────────────────────
 
 Steps:
-  1. Go to http://localhost:5000
+  1. Go to http://localhost:5900
   2. Should redirect to /login
   3. See login form
   4. Enter email: mehedi@example.com
@@ -308,7 +308,7 @@ TEST 2.4: Member Cannot Access Manager Panel
 
 Steps:
   1. Login as member
-  2. Try to access: http://localhost:5000/manager
+  2. Try to access: http://localhost:5900/manager
   3. Or check if Manager Panel link appears in navbar
 
 Expected Results:
@@ -636,7 +636,7 @@ TEST 5.4: Empty Database Reset
 Steps:
   1. Delete hostel_meals.db file
   2. Restart Flask app
-  3. Try to access http://localhost:5000
+  3. Try to access http://localhost:5900
 
 Expected Results:
   ✓ New database created automatically

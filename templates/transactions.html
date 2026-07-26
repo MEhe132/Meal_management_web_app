@@ -103,6 +103,9 @@
                             <th class="px-6 py-4 font-bold text-xs uppercase tracking-wider text-center">Type</th>
                             <th class="px-6 py-4 font-bold text-xs uppercase tracking-wider">Notes</th>
                             <th class="px-6 py-4 font-bold text-xs uppercase tracking-wider text-right">Amount</th>
+                            {% if current_user.is_manager() %}
+                            <th class="px-6 py-4 font-bold text-xs uppercase tracking-wider text-right">Actions</th>
+                            {% endif %}
                         </tr>
                     </thead>
                     <tbody class="divide-y divide-slate-100 dark:divide-slate-800">
@@ -120,11 +123,20 @@
                             <td class="px-6 py-4 text-right font-black {% if is_deposit %}text-green-600 dark:text-green-400{% else %}text-red-600 dark:text-red-400{% endif %} whitespace-nowrap">
                                 {% if is_deposit %}+{% else %}-{% endif %}৳{{ "%.2f"|format(trans.amount) }}
                             </td>
+                            {% if current_user.is_manager() %}
+                            <td class="px-6 py-4 text-right whitespace-nowrap">
+                                <button onclick="deleteTransaction({{ trans.id }})" class="text-red-500 hover:text-red-700 dark:hover:text-red-400 p-2 hover:bg-red-50 dark:hover:bg-red-950/20 rounded-lg transition" title="Delete Transaction">
+                                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                    </svg>
+                                </button>
+                            </td>
+                            {% endif %}
                         </tr>
                         {% endfor %}
                         {% if transactions|length == 0 %}
                         <tr>
-                            <td colspan="5" class="px-6 py-8 text-center text-slate-450 dark:text-slate-500">No transactions recorded yet.</td>
+                            <td colspan="{% if current_user.is_manager() %}6{% else %}5{% endif %}" class="px-6 py-8 text-center text-slate-450 dark:text-slate-500">No transactions recorded yet.</td>
                         </tr>
                         {% endif %}
                     </tbody>
@@ -249,13 +261,25 @@
             transactionsBtn.className = inactiveClass;
             expensesTab.classList.remove('hidden');
             transactionsTab.classList.add('hidden');
+            window.history.replaceState(null, null, '?tab=expenses');
         } else {
             transactionsBtn.className = activeClass;
             expensesBtn.className = inactiveClass;
             transactionsTab.classList.remove('hidden');
             expensesTab.classList.add('hidden');
+            window.history.replaceState(null, null, '?tab=transactions');
         }
     }
+
+    // Automatically switch to tab from URL on page load
+    document.addEventListener('DOMContentLoaded', () => {
+        const urlParams = new URLSearchParams(window.location.search);
+        if (urlParams.get('tab') === 'transactions') {
+            switchTab('transactions');
+        } else if (urlParams.get('tab') === 'expenses') {
+            switchTab('expenses');
+        }
+    });
 
     // Modal helpers
     function openModal(id) {
@@ -284,7 +308,7 @@
         const desc = document.getElementById('moneyDescription').value.trim();
 
         if (!userId || !amount || amount <= 0) {
-            alert('⚠️ Please select a member and enter a positive amount.');
+            showToast('Please select a member and enter a positive amount.', 'warning');
             return;
         }
 
@@ -301,15 +325,15 @@
         .then(response => response.json())
         .then(data => {
             if (data.success) {
-                alert('✅ Money entry recorded!');
-                window.location.reload();
+                showToast('Money entry recorded!', 'success');
+                setTimeout(() => window.location.href = window.location.pathname + '?tab=transactions', 400);
             } else {
-                alert('❌ Error: ' + data.message);
+                showToast('Error: ' + data.message, 'danger');
             }
         })
         .catch(err => {
             console.error(err);
-            alert('❌ API request failed.');
+            showToast('API request failed.', 'danger');
         });
     }
 
@@ -321,7 +345,7 @@
         const expenseDate = document.getElementById('expenseDate').value;
 
         if (!amount || amount == 0 || !desc) {
-            alert('⚠️ Please enter a valid non-zero amount and description.');
+            showToast('Please enter a valid non-zero amount and description.', 'warning');
             return;
         }
 
@@ -338,39 +362,55 @@
         .then(response => response.json())
         .then(data => {
             if (data.success) {
-                alert('✅ Expense recorded successfully!');
-                window.location.reload();
+                showToast('Expense recorded successfully!', 'success');
+                setTimeout(() => window.location.href = window.location.pathname + '?tab=expenses', 400);
             } else {
-                alert('❌ Error: ' + data.message);
+                showToast('Error: ' + data.message, 'danger');
             }
         })
         .catch(err => {
             console.error(err);
-            alert('❌ API request failed.');
+            showToast('API request failed.', 'danger');
         });
     }
 
     // Delete expense helper (manager only)
     function deleteExpense(expenseId) {
-        if (!confirm('⚠️ Are you sure you want to delete this expense? This will recalculate the live meal rates.')) {
-            return;
-        }
-
         fetch(`/api/delete-expense/${expenseId}`, {
             method: 'DELETE'
         })
         .then(response => response.json())
         .then(data => {
             if (data.success) {
-                alert('✅ Expense deleted successfully.');
-                window.location.reload();
+                showToast('Expense deleted successfully.', 'success');
+                setTimeout(() => window.location.href = window.location.pathname + '?tab=expenses', 400);
             } else {
-                alert('❌ Error: ' + data.message);
+                showToast('Error: ' + data.message, 'danger');
             }
         })
         .catch(err => {
             console.error(err);
-            alert('❌ Request failed.');
+            showToast('Request failed.', 'danger');
+        });
+    }
+
+    // Delete transaction helper (manager only)
+    function deleteTransaction(transactionId) {
+        fetch(`/api/delete-money/${transactionId}`, {
+            method: 'DELETE'
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                showToast('Transaction deleted successfully.', 'success');
+                setTimeout(() => window.location.href = window.location.pathname + '?tab=transactions', 400);
+            } else {
+                showToast('Error: ' + data.message, 'danger');
+            }
+        })
+        .catch(err => {
+            console.error(err);
+            showToast('Request failed.', 'danger');
         });
     }
 </script>

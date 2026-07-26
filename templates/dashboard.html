@@ -13,7 +13,7 @@
                 expenses</p>
         </div>
         <div class="flex flex-col md:flex-row items-start md:items-center gap-3">
-            {% if current_user.is_manager() %}
+            {% if current_user.is_approved and current_user.is_manager() %}
             <button onclick="openModal('addMealModal')"
                 class="px-4 py-2 bg-gradient-to-r from-blue-500 to-indigo-500 hover:from-blue-600 hover:to-indigo-600 text-white rounded-xl font-bold text-xs shadow-sm hover:shadow transition whitespace-nowrap">
                 🍽️ Add / Update Meal
@@ -27,11 +27,30 @@
         </div>
     </div>
 
+    {% if not current_user.is_approved %}
+    <div class="bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 rounded-2xl shadow-sm p-8 md:p-12 text-center flex flex-col items-center justify-center animate-fade-in mt-8">
+        <div class="w-20 h-20 bg-indigo-50 dark:bg-indigo-900/30 rounded-full flex items-center justify-center mb-6">
+            <span class="text-4xl">⏳</span>
+        </div>
+        <h2 class="text-2xl md:text-3xl font-extrabold text-slate-900 dark:text-white mb-4">Account Pending Approval</h2>
+        <p class="text-slate-500 dark:text-slate-400 max-w-lg mx-auto text-base leading-relaxed">
+            Welcome to Plate & Spoon! Your account has been created successfully, but it requires manager approval before you can access the system. 
+            <br><br>
+            Please wait for the manager to verify your identity and approve your account.
+        </p>
+    </div>
+</div>
+    {% else %}
+
     <!-- Month End Warning Banner for Manager -->
     {% if show_month_end_warning %}
-    <div
-        class="bg-amber-50 border-l-4 border-amber-500 p-4 rounded-xl shadow-sm dark:bg-amber-950/30 dark:border-amber-600 animate-pulse">
-        <div class="flex items-start">
+    <div id="monthEndBanner" class="bg-amber-50 border-l-4 border-amber-500 p-4 rounded-xl shadow-sm dark:bg-amber-950/30 dark:border-amber-600 relative">
+        <button onclick="dismissMonthEndBanner()" class="absolute top-3 right-3 text-amber-500 hover:text-amber-700 dark:hover:text-amber-400 transition" aria-label="Dismiss">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                <path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clip-rule="evenodd" />
+            </svg>
+        </button>
+        <div class="flex items-start pr-8">
             <div class="flex-shrink-0">
                 <span class="text-amber-500 text-xl">⚠️</span>
             </div>
@@ -45,6 +64,23 @@
             </div>
         </div>
     </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const currentMonth = new Date().toISOString().slice(0, 7); // Format: YYYY-MM
+            if (localStorage.getItem('monthEndAlertDismissed') === currentMonth) {
+                const banner = document.getElementById('monthEndBanner');
+                if (banner) banner.style.display = 'none';
+            }
+        });
+
+        function dismissMonthEndBanner() {
+            const currentMonth = new Date().toISOString().slice(0, 7);
+            localStorage.setItem('monthEndAlertDismissed', currentMonth);
+            const banner = document.getElementById('monthEndBanner');
+            if (banner) banner.style.display = 'none';
+        }
+    </script>
     {% endif %}
 
     <!-- Statistics Cards -->
@@ -368,7 +404,7 @@
         </div>
     </div>
 </div>
-
+{% endif %}
 {% endblock %}
 
 {% block scripts %}
@@ -443,7 +479,7 @@
         const countStr = document.getElementById('mealCount').value;
 
         if (!userId || !dateStr || !countStr) {
-            alert('⚠️ Please fill out all fields.');
+            showToast('Please fill out all fields.', 'warning');
             return;
         }
 
@@ -459,15 +495,15 @@
             .then(response => response.json())
             .then(data => {
                 if (data.success) {
-                    alert('✅ ' + data.message);
-                    window.location.reload();
+                    showToast(data.message, 'success');
+                    setTimeout(() => window.location.reload(), 400);
                 } else {
-                    alert('❌ Error: ' + data.message);
+                    showToast('Error: ' + data.message, 'danger');
                 }
             })
             .catch(err => {
                 console.error(err);
-                alert('❌ API request failed.');
+                showToast('API request failed.', 'danger');
             });
     }
 </script>

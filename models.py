@@ -17,8 +17,9 @@ class User(db.Model):
     password_hash = db.Column(db.String(255), nullable=False)
     role = db.Column(db.String(20), default='member')  # 'member' or 'manager'
     is_active = db.Column(db.Boolean, default=True)
+    is_approved = db.Column(db.Boolean, default=False)
     avatar_seed = db.Column(db.String(100), nullable=True)
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    created_at = db.Column(db.DateTime, default=datetime.now)
     
     # Relationships
     meals = db.relationship('Meal', backref='user', lazy=True, cascade='all, delete-orphan')
@@ -130,10 +131,14 @@ class Meal(db.Model):
     lunch = db.Column(db.Boolean, default=False)
     dinner = db.Column(db.Boolean, default=False)
     meal_count = db.Column(db.Float, default=0.0)
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
-    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    created_at = db.Column(db.DateTime, default=datetime.now)
+    updated_at = db.Column(db.DateTime, default=datetime.now, onupdate=datetime.now)
     
-    __table_args__ = (db.UniqueConstraint('user_id', 'date', name='unique_user_date'),)
+    __table_args__ = (
+        db.UniqueConstraint('user_id', 'date', name='unique_user_date'),
+        db.Index('idx_meals_date', 'date'),
+        db.Index('idx_meals_user_date', 'user_id', 'date'),
+    )
     
     def update_meal_count(self):
         """Update meal count based on breakfast, lunch, and dinner flags"""
@@ -152,9 +157,14 @@ class Transaction(db.Model):
     amount = db.Column(db.Float, nullable=False)
     type = db.Column(db.String(20), nullable=False)  # 'deposit' or 'withdrawal'
     description = db.Column(db.String(255))
-    date = db.Column(db.DateTime, default=datetime.utcnow)
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    date = db.Column(db.DateTime, default=datetime.now)
+    created_at = db.Column(db.DateTime, default=datetime.now)
     
+    __table_args__ = (
+        db.Index('idx_transactions_user_type', 'user_id', 'type'),
+        db.Index('idx_transactions_date', 'date'),
+    )
+
     def __repr__(self):
         return f'<Transaction {self.user_id} - {self.type}: {self.amount}>'
 
@@ -167,12 +177,17 @@ class Expense(db.Model):
     amount = db.Column(db.Float, nullable=False)
     description = db.Column(db.String(255), nullable=False)
     user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=True)
-    date = db.Column(db.DateTime, default=datetime.utcnow)
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    date = db.Column(db.DateTime, default=datetime.now)
+    created_at = db.Column(db.DateTime, default=datetime.now)
     
     # Relationship
     user = db.relationship('User', backref='expenses')
     
+    __table_args__ = (
+        db.Index('idx_expenses_date', 'date'),
+        db.Index('idx_expenses_user', 'user_id'),
+    )
+
     def __repr__(self):
         return f'<Expense {self.amount} - {self.description}>'
 
@@ -185,7 +200,7 @@ class MealRate(db.Model):
     rate = db.Column(db.Float, nullable=False)
     effective_date = db.Column(db.Date, nullable=False)
     description = db.Column(db.String(255))
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    created_at = db.Column(db.DateTime, default=datetime.now)
     
     def __repr__(self):
         return f'<MealRate {self.rate} - {self.effective_date}>'
@@ -200,7 +215,7 @@ class MealLock(db.Model):
     breakfast_locked = db.Column(db.Boolean, default=False, nullable=False)
     lunch_locked = db.Column(db.Boolean, default=False, nullable=False)
     dinner_locked = db.Column(db.Boolean, default=False, nullable=False)
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    created_at = db.Column(db.DateTime, default=datetime.now)
     
     def __repr__(self):
         return f'<MealLock {self.date} - B:{self.breakfast_locked}, L:{self.lunch_locked}, D:{self.dinner_locked}>'
@@ -215,8 +230,8 @@ class DailyMenu(db.Model):
     breakfast_menu = db.Column(db.String(255), default="", nullable=False)
     lunch_menu = db.Column(db.String(255), default="", nullable=False)
     dinner_menu = db.Column(db.String(255), default="", nullable=False)
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
-    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    created_at = db.Column(db.DateTime, default=datetime.now)
+    updated_at = db.Column(db.DateTime, default=datetime.now, onupdate=datetime.now)
     
     def __repr__(self):
         return f'<DailyMenu {self.date}>'
@@ -230,12 +245,17 @@ class ChatMessage(db.Model):
     user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
     message = db.Column(db.Text, nullable=False)
     reply_to_id = db.Column(db.Integer, db.ForeignKey('chat_messages.id'), nullable=True)
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    created_at = db.Column(db.DateTime, default=datetime.now)
     
     # Relationship
     user = db.relationship('User', backref=db.backref('chat_messages', lazy=True, cascade='all, delete-orphan'))
     reply_to = db.relationship('ChatMessage', remote_side=[id], backref=db.backref('replies', lazy=True))
     
+    __table_args__ = (
+        db.Index('idx_chat_created_at', 'created_at'),
+        db.Index('idx_chat_user', 'user_id'),
+    )
+
     def __repr__(self):
         return f'<ChatMessage {self.id} - {self.message[:20]}>'
 
@@ -317,4 +337,108 @@ def get_monthly_hostel_stats(year, month):
         'total_cost': total_cost,
         'total_deposited': total_deposited,
         'total_expenses': total_expenses
-    }
+    }
+
+def get_bulk_user_monthly_stats(target_year, target_month):
+    """
+    Get monthly stats (monthly_meals, monthly_cost) for all users in batch in 1-2 aggregate queries.
+    Returns: (stats_by_user dict mapping user_id -> {'monthly_meals': float, 'monthly_cost': float}, current_monthly_rate)
+    """
+    meal_rate = get_monthly_meal_rate(target_year, target_month)
+    
+    results = db.session.query(
+        Meal.user_id,
+        db.func.sum(Meal.meal_count).label('sum_meals')
+    ).filter(
+        db.extract('year', Meal.date) == target_year,
+        db.extract('month', Meal.date) == target_month
+    ).group_by(Meal.user_id).all()
+    
+    stats_by_user = {}
+    for user_id, sum_meals in results:
+        meals = float(sum_meals or 0.0)
+        cost = meals * meal_rate if meal_rate > 0 else 0.0
+        stats_by_user[user_id] = {
+            'monthly_meals': meals,
+            'monthly_cost': cost
+        }
+    return stats_by_user, meal_rate
+
+def get_bulk_user_balances(all_user_ids, current_date=None):
+    """
+    Batch compute total deposited and running balance for a list of user IDs in aggregated SQL queries.
+    Returns: dict mapping user_id -> {'total_deposited': float, 'balance': float}
+    """
+    if current_date is None:
+        current_date = date.today()
+    if not all_user_ids:
+        return {}
+        
+    tx_results = db.session.query(
+        Transaction.user_id,
+        Transaction.type,
+        db.func.sum(Transaction.amount).label('sum_amount')
+    ).filter(
+        Transaction.user_id.in_(all_user_ids)
+    ).group_by(Transaction.user_id, Transaction.type).all()
+    
+    tx_map = {uid: {'deposit': 0.0, 'withdrawal': 0.0} for uid in all_user_ids}
+    for uid, tx_type, amt in tx_results:
+        if uid in tx_map and tx_type in tx_map[uid]:
+            tx_map[uid][tx_type] = float(amt or 0.0)
+
+    expense_rows = db.session.query(
+        db.extract('year', Expense.date).label('year'),
+        db.extract('month', Expense.date).label('month'),
+        db.func.sum(Expense.amount).label('total_exp')
+    ).group_by('year', 'month').all()
+    
+    monthly_expenses = {}
+    for r in expense_rows:
+        y, m = int(r.year), int(r.month)
+        monthly_expenses[(y, m)] = float(r.total_exp or 0.0)
+
+    monthly_all_meals_rows = db.session.query(
+        db.extract('year', Meal.date).label('year'),
+        db.extract('month', Meal.date).label('month'),
+        db.func.sum(Meal.meal_count).label('tot_meals')
+    ).filter(Meal.date <= current_date).group_by('year', 'month').all()
+
+    monthly_rates = {}
+    for r in monthly_all_meals_rows:
+        y, m = int(r.year), int(r.month)
+        tot_m = float(r.tot_meals or 0.0)
+        exp = monthly_expenses.get((y, m), 0.0)
+        monthly_rates[(y, m)] = (exp / tot_m) if tot_m > 0 else 0.0
+
+    user_monthly_meals_rows = db.session.query(
+        Meal.user_id,
+        db.extract('year', Meal.date).label('year'),
+        db.extract('month', Meal.date).label('month'),
+        db.func.sum(Meal.meal_count).label('u_meals')
+    ).filter(
+        Meal.user_id.in_(all_user_ids),
+        Meal.date <= current_date
+    ).group_by(Meal.user_id, 'year', 'month').all()
+
+    user_total_costs = {uid: 0.0 for uid in all_user_ids}
+    for r in user_monthly_meals_rows:
+        uid = r.user_id
+        y, m = int(r.year), int(r.month)
+        u_m = float(r.u_meals or 0.0)
+        rate = monthly_rates.get((y, m), 0.0)
+        user_total_costs[uid] += (u_m * rate)
+
+    balances_by_user = {}
+    for uid in all_user_ids:
+        dep = tx_map[uid]['deposit']
+        wth = tx_map[uid]['withdrawal']
+        cst = user_total_costs.get(uid, 0.0)
+        bal = dep - cst - wth
+        balances_by_user[uid] = {
+            'total_deposited': dep,
+            'balance': bal
+        }
+        
+    return balances_by_user
+

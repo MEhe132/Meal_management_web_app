@@ -1,12 +1,16 @@
-"""
-Hostel Meal Management System - Flask Application
-"""
 import os
+import threading
 from flask import Flask, render_template, request, redirect, url_for, session, flash, jsonify, g
 from functools import wraps
 from datetime import datetime, date, timedelta
+from sqlalchemy import inspect
 from config import config
-from models import db, User, Meal, Transaction, MealRate, get_current_meal_rate, get_hostel_stats, get_monthly_meal_rate, get_monthly_hostel_stats, Expense, MealLock, DailyMenu, ChatMessage
+from models import (
+    db, User, Meal, Transaction, MealRate, get_current_meal_rate,
+    get_hostel_stats, get_monthly_meal_rate, get_monthly_hostel_stats,
+    Expense, MealLock, DailyMenu, ChatMessage,
+    get_bulk_user_monthly_stats, get_bulk_user_balances
+)
 import subprocess
 import sys
 import queue
@@ -15,25 +19,30 @@ import json
 class MessageAnnouncer:
     def __init__(self):
         self.listeners = []
+        self._lock = threading.Lock()
 
     def listen(self):
         q = queue.Queue(maxsize=100)
-        self.listeners.append(q)
+        with self._lock:
+            self.listeners.append(q)
         return q
 
     def disconnect(self, q):
-        if q in self.listeners:
-            try:
-                self.listeners.remove(q)
-            except ValueError:
-                pass
+        with self._lock:
+            if q in self.listeners:
+                try:
+                    self.listeners.remove(q)
+                except ValueError:
+                    pass
 
     def announce(self, msg):
-        for i in reversed(range(len(self.listeners))):
+        with self._lock:
+            listeners_copy = list(self.listeners)
+        for q in listeners_copy:
             try:
-                self.listeners[i].put_nowait(msg)
+                q.put_nowait(msg)
             except queue.Full:
-                del self.listeners[i]
+                self.disconnect(q)
 
 announcer = MessageAnnouncer()
 
@@ -51,51 +60,40 @@ def create_app(config_name='development'):
     # Register context processor with request-scoped caching
     @app.context_processor
     def inject_user():
-        if 'current_user' not in g:
-            g.current_user = User.query.get(session['user_id']) if 'user_id' in session else None
-        return {'current_user': g.current_user}
+        current_user = getattr(g, 'current_user', None)
+        if current_user is None and 'user_id' in session:
+            current_user = User.query.get(session['user_id'])
+            g.current_user = current_user
+        return {'current_user': current_user}
     
-    # Create database tables
+    # Create database tables & safe schema inspection migrations
     with app.app_context():
         db.create_all()
         
-        # Ensure chat messages table exists (since db.create_all() will handle it if entirely new,
-        # but if we need a safe migration similar to others, we can do it)
-        try:
-            db.session.execute(db.text("SELECT id FROM chat_messages LIMIT 1"))
-        except Exception:
-            db.session.rollback()
-            try:
-                # Actually create_all handles missing tables, but just in case
-                db.create_all()
-            except Exception as e:
-                print(f"Error checking chat messages: {e}")
-                db.session.rollback()
-                
+        inspector = inspect(db.engine)
+        
         # Safe migration: Add user_id column to expenses table if it doesn't exist
-        try:
-            db.session.execute(db.text("SELECT user_id FROM expenses LIMIT 1"))
-        except Exception:
-            db.session.rollback()
-            try:
-                db.session.execute(db.text("ALTER TABLE expenses ADD COLUMN user_id INTEGER REFERENCES users(id)"))
-                db.session.commit()
-            except Exception as e:
-                print(f"Error migrating database user_id: {e}")
-                db.session.rollback()
-
-        # Safe migration: Add breakfast, lunch, dinner columns to meals table if they don't exist
-        for col_name in ['breakfast', 'lunch', 'dinner']:
-            try:
-                db.session.execute(db.text(f"SELECT {col_name} FROM meals LIMIT 1"))
-            except Exception:
-                db.session.rollback()
+        if inspector.has_table('expenses'):
+            columns = [c['name'] for c in inspector.get_columns('expenses')]
+            if 'user_id' not in columns:
                 try:
-                    db.session.execute(db.text(f"ALTER TABLE meals ADD COLUMN {col_name} BOOLEAN DEFAULT 0"))
+                    db.session.execute(db.text("ALTER TABLE expenses ADD COLUMN user_id INTEGER REFERENCES users(id)"))
                     db.session.commit()
                 except Exception as e:
-                    print(f"Error migrating database column {col_name}: {e}")
+                    print(f"Error migrating database user_id: {e}")
                     db.session.rollback()
+
+        # Safe migration: Add breakfast, lunch, dinner columns to meals table if they don't exist
+        if inspector.has_table('meals'):
+            columns = [c['name'] for c in inspector.get_columns('meals')]
+            for col_name in ['breakfast', 'lunch', 'dinner']:
+                if col_name not in columns:
+                    try:
+                        db.session.execute(db.text(f"ALTER TABLE meals ADD COLUMN {col_name} BOOLEAN DEFAULT 0"))
+                        db.session.commit()
+                    except Exception as e:
+                        print(f"Error migrating database column {col_name}: {e}")
+                        db.session.rollback()
 
         # Backfill existing meals where breakfast, lunch, or dinner are NULL
         try:
@@ -133,28 +131,26 @@ def create_app(config_name='development'):
             db.session.rollback()
             
         # Safe migration: Add avatar_seed column to users table if it doesn't exist
-        try:
-            db.session.execute(db.text("SELECT avatar_seed FROM users LIMIT 1"))
-        except Exception:
-            db.session.rollback()
-            try:
-                db.session.execute(db.text("ALTER TABLE users ADD COLUMN avatar_seed VARCHAR(100)"))
-                db.session.commit()
-            except Exception as e:
-                print(f"Error migrating database avatar_seed: {e}")
-                db.session.rollback()
+        if inspector.has_table('users'):
+            columns = [c['name'] for c in inspector.get_columns('users')]
+            if 'avatar_seed' not in columns:
+                try:
+                    db.session.execute(db.text("ALTER TABLE users ADD COLUMN avatar_seed VARCHAR(100)"))
+                    db.session.commit()
+                except Exception as e:
+                    print(f"Error migrating database avatar_seed: {e}")
+                    db.session.rollback()
 
         # Safe migration: Add reply_to_id column to chat_messages table if it doesn't exist
-        try:
-            db.session.execute(db.text("SELECT reply_to_id FROM chat_messages LIMIT 1"))
-        except Exception:
-            db.session.rollback()
-            try:
-                db.session.execute(db.text("ALTER TABLE chat_messages ADD COLUMN reply_to_id INTEGER REFERENCES chat_messages(id)"))
-                db.session.commit()
-            except Exception as e:
-                print(f"Error migrating database reply_to_id: {e}")
-                db.session.rollback()
+        if inspector.has_table('chat_messages'):
+            columns = [c['name'] for c in inspector.get_columns('chat_messages')]
+            if 'reply_to_id' not in columns:
+                try:
+                    db.session.execute(db.text("ALTER TABLE chat_messages ADD COLUMN reply_to_id INTEGER REFERENCES chat_messages(id)"))
+                    db.session.commit()
+                except Exception as e:
+                    print(f"Error migrating database reply_to_id: {e}")
+                    db.session.rollback()
                 
         # Create default meal rate if doesn't exist
         if MealRate.query.first() is None:
@@ -179,9 +175,23 @@ def create_app(config_name='development'):
                 flash('Please log in first', 'warning')
                 return redirect(url_for('login'))
             
-            user = User.query.get(session['user_id'])
+            user = getattr(g, 'current_user', None) or User.query.get(session['user_id'])
             if not user or not user.is_manager():
                 flash('You do not have permission to access this page', 'danger')
+                return redirect(url_for('dashboard'))
+            return f(*args, **kwargs)
+        return decorated_function
+    
+    def approved_required(f):
+        @wraps(f)
+        def decorated_function(*args, **kwargs):
+            if 'user_id' not in session:
+                flash('Please log in first', 'warning')
+                return redirect(url_for('login'))
+            
+            user = getattr(g, 'current_user', None) or User.query.get(session['user_id'])
+            if not user or not user.is_approved:
+                flash('Your account is pending manager approval', 'warning')
                 return redirect(url_for('dashboard'))
             return f(*args, **kwargs)
         return decorated_function
@@ -245,7 +255,7 @@ def create_app(config_name='development'):
                 flash('Manager already exists', 'danger')
                 return redirect(url_for('register'))
             
-            user = User(name=name, email=email, role=role)
+            user = User(name=name, email=email, role=role, is_approved=(role == 'manager'))
             user.set_password(password)
             
             db.session.add(user)
@@ -269,10 +279,10 @@ def create_app(config_name='development'):
     @login_required
     def dashboard():
         """Dashboard - Main page for both members and managers"""
-        current_user = User.query.get(session['user_id'])
+        current_user = getattr(g, 'current_user', None) or User.query.get(session['user_id'])
         
-        # FIX 1: Get ALL active users (members + manager) for dashboard
         all_users = User.query.filter_by(is_active=True).all()
+        user_ids = [u.id for u in all_users]
         
         month_param = request.args.get('month', type=int)
         year_param = request.args.get('year', type=int)
@@ -294,15 +304,21 @@ def create_app(config_name='development'):
             first_day = date(today_real.year, today_real.month, 1)
             target_end_date = today_real
         
-        # Get all meals for this month
+        target_year = first_day.year
+        target_month = first_day.month
+        
+        # Batch fetch all meals for all users this month in a single query
+        all_month_meals = Meal.query.filter(
+            Meal.user_id.in_(user_ids),
+            Meal.date >= first_day,
+            Meal.date <= target_end_date
+        ).all() if user_ids else []
+        
         meals_data = {}
-        for user in all_users:
-            user_meals = Meal.query.filter(
-                Meal.user_id == user.id,
-                Meal.date >= first_day,
-                Meal.date <= target_end_date
-            ).all()
-            meals_data[user.id] = {user_meal.date: user_meal.meal_count for user_meal in user_meals}
+        for m in all_month_meals:
+            if m.user_id not in meals_data:
+                meals_data[m.user_id] = {}
+            meals_data[m.user_id][m.date] = m.meal_count
         
         # Get all dates in current month
         all_dates = []
@@ -311,32 +327,24 @@ def create_app(config_name='development'):
             all_dates.append(current_date)
             current_date += timedelta(days=1)
             
-        target_year = first_day.year
-        target_month = first_day.month
+        # Batch pre-calculate monthly user stats and overall running balances
+        monthly_user_stats, current_monthly_rate = get_bulk_user_monthly_stats(target_year, target_month)
+        bulk_user_balances = get_bulk_user_balances(user_ids)
         
-        # Pre-calculate monthly meal rate once to eliminate N+1 queries in user loop
-        current_monthly_rate = get_monthly_meal_rate(target_year, target_month)
-        
-        # Calculate stats for each user (strictly monthly for meals and cost, overall for balance)
         user_stats = []
         for user in all_users:
-            monthly_meals = user.get_monthly_meals(target_year, target_month)
-            monthly_cost = user.get_monthly_cost(target_year, target_month)
-            total_deposited = user.get_total_deposited() # Overall
-            balance = user.get_balance() # Overall running balance
-            
-            # Check if user is manager
-            is_manager = user.is_manager()
+            u_m_stats = monthly_user_stats.get(user.id, {'monthly_meals': 0.0, 'monthly_cost': 0.0})
+            u_bal_stats = bulk_user_balances.get(user.id, {'total_deposited': 0.0, 'balance': 0.0})
             
             user_stats.append({
                 'user': user,
                 'daily_meals': [meals_data.get(user.id, {}).get(d, 0) for d in all_dates],
-                'total_meals': monthly_meals,
+                'total_meals': u_m_stats['monthly_meals'],
                 'meal_rate': current_monthly_rate,
-                'total_deposited': total_deposited,
-                'total_cost': monthly_cost,
-                'balance': balance,
-                'is_manager': is_manager  # Add manager flag for display
+                'total_deposited': u_bal_stats['total_deposited'],
+                'total_cost': u_m_stats['monthly_cost'],
+                'balance': u_bal_stats['balance'],
+                'is_manager': user.is_manager()
             })
         
         # Sort user_stats so logged-in user always appears at the top (first row)
@@ -360,6 +368,7 @@ def create_app(config_name='development'):
             target_year=target_year,
             target_month=target_month
         )
+
 
     @app.route('/meal-status', methods=['GET'])
     @login_required
@@ -853,6 +862,27 @@ def create_app(config_name='development'):
             'new_balance': new_balance
         }
     
+    @app.route('/api/delete-money/<int:transaction_id>', methods=['DELETE'])
+    @manager_required
+    def delete_money(transaction_id):
+        """API endpoint to delete a transaction (deposit/withdrawal)"""
+        transaction = Transaction.query.get(transaction_id)
+        if not transaction:
+            return {'success': False, 'message': 'Transaction not found'}, 404
+        
+        user_id = transaction.user_id
+        db.session.delete(transaction)
+        db.session.commit()
+        
+        user = User.query.get(user_id)
+        new_balance = user.get_balance()
+        
+        return {
+            'success': True,
+            'message': 'Transaction deleted successfully',
+            'new_balance': new_balance
+        }
+    
     @app.route('/api/set-meal-rate', methods=['POST'])
     @manager_required
     def set_meal_rate():
@@ -888,12 +918,13 @@ def create_app(config_name='development'):
         user_id = request.json.get('user_id')
         expense_date_str = request.json.get('date')
         
-        # Handle custom date or default to today
-        expense_date = datetime.utcnow()
+        # Handle custom date or default to real current local date and time
+        expense_date = datetime.now()
         if expense_date_str:
             try:
-                # Convert string 'YYYY-MM-DD' to datetime
-                expense_date = datetime.strptime(expense_date_str, '%Y-%m-%d')
+                # Convert string 'YYYY-MM-DD' to date and attach current local time
+                parsed_date = datetime.strptime(expense_date_str, '%Y-%m-%d').date()
+                expense_date = datetime.combine(parsed_date, datetime.now().time())
             except ValueError:
                 return {'success': False, 'message': 'Invalid date format'}, 400
         
@@ -1062,8 +1093,35 @@ def create_app(config_name='development'):
             ]
         }
     
+    @app.route('/api/approve-member/<int:user_id>', methods=['POST'])
+    @manager_required
+    def approve_member(user_id):
+        """API endpoint to approve a pending member"""
+        user = User.query.get(user_id)
+        if not user:
+            return {'success': False, 'message': 'User not found'}, 404
+        
+        user.is_approved = True
+        db.session.commit()
+        return {'success': True, 'message': f'{user.name} has been approved.'}
+
+    @app.route('/api/delete-member/<int:user_id>', methods=['DELETE'])
+    @manager_required
+    def delete_member(user_id):
+        """API endpoint to reject/delete a member"""
+        user = User.query.get(user_id)
+        if not user:
+            return {'success': False, 'message': 'User not found'}, 404
+        
+        if user.is_manager():
+            return {'success': False, 'message': 'Cannot delete manager.'}, 400
+            
+        db.session.delete(user)
+        db.session.commit()
+        return {'success': True, 'message': f'Member deleted.'}
+    
     return app
 
 if __name__ == '__main__':
     app = create_app('development')
-    app.run(debug=True, host='127.0.0.1', port=5000)
+    app.run(debug=True, host='0.0.0.0', port=5900)

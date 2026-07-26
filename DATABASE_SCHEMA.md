@@ -515,7 +515,16 @@ Database Maintenance:
      3. Run db.create_all() with new database
      4. Migrate data (dump and restore)
 
-5. Monitoring
+5. Monitoring & Performance
+   - Explicit Indexes:
+     - `idx_meals_date`: `meals(date)`
+     - `idx_meals_user_date`: `meals(user_id, date)`
+     - `idx_transactions_user_type`: `transactions(user_id, type)`
+     - `idx_transactions_date`: `transactions(date)`
+     - `idx_expenses_date`: `expenses(date)`
+     - `idx_expenses_user`: `expenses(user_id)`
+     - `idx_chat_created_at`: `chat_messages(created_at)`
+     - `idx_chat_user`: `chat_messages(user_id)`
    - Monitor database file size
    - Regular backups
    - Check transaction logs
