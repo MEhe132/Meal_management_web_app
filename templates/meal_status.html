@@ -19,7 +19,7 @@
             <span class="text-xs font-bold text-slate-500 uppercase tracking-wider">Viewing member:</span>
             <select onchange="window.location.href='?user_id=' + this.value" class="px-3 py-1.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-sm font-semibold focus:outline-none focus:ring-2 focus:ring-indigo-500 text-slate-900 dark:text-slate-100">
                 {% for u in all_users %}
-                <option value="{{ u.id }}" {% if target_user.id == u.id %}selected{% endif %}>{{ u.name }} ({% if u.is_manager() %}Manager{% else %}Member{% endif %})</option>
+                <option value="{{ u.id }}" {% if target_user.id == u.id %}selected{% endif %}>{{ u.name }} (ID: #{{ u.id }} - {% if u.is_manager() %}Manager{% else %}Member{% endif %})</option>
                 {% endfor %}
             </select>
         </div>
