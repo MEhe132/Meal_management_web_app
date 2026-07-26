@@ -570,7 +570,7 @@
                     if (data.success && data.members.length > 0) {
                         let html = '<option value="">-- Select a member --</option>';
                         data.members.forEach(m => {
-                            html += `<option value="${m.id}">${m.name} (${m.email})</option>`;
+                            html += `<option value="${m.id}">${m.name} (MEM-${String(m.id).padStart(4, '0')} - ${m.email})</option>`;
                         });
                         select.innerHTML = html;
                     } else {
