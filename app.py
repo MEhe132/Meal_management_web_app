@@ -339,6 +339,9 @@ def create_app(config_name='development'):
                 'is_manager': is_manager  # Add manager flag for display
             })
         
+        # Sort user_stats so logged-in user always appears at the top (first row)
+        user_stats.sort(key=lambda s: (0 if s['user'].id == current_user.id else 1, s['user'].id))
+        
         # Get hostel stats
         hostel_stats = get_monthly_hostel_stats(target_year, target_month)
         
