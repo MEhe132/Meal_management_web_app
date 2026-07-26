@@ -1,19 +1,41 @@
 """
 Hostel Meal Management System - Flask Application
 """
-# At the top of app.py, add this import
-
 import os
-from flask import Flask, render_template, request, redirect, url_for, session, flash, jsonify
+from flask import Flask, render_template, request, redirect, url_for, session, flash, jsonify, g
 from functools import wraps
 from datetime import datetime, date, timedelta
 from config import config
-from models import db, User, Meal, Transaction, MealRate, get_current_meal_rate, get_hostel_stats, get_monthly_meal_rate, get_monthly_hostel_stats, Expense, MealLock, DailyMenu
+from models import db, User, Meal, Transaction, MealRate, get_current_meal_rate, get_hostel_stats, get_monthly_meal_rate, get_monthly_hostel_stats, Expense, MealLock, DailyMenu, ChatMessage
 import subprocess
 import sys
+import queue
+import json
 
+class MessageAnnouncer:
+    def __init__(self):
+        self.listeners = []
 
-from waitress import serve
+    def listen(self):
+        q = queue.Queue(maxsize=100)
+        self.listeners.append(q)
+        return q
+
+    def disconnect(self, q):
+        if q in self.listeners:
+            try:
+                self.listeners.remove(q)
+            except ValueError:
+                pass
+
+    def announce(self, msg):
+        for i in reversed(range(len(self.listeners))):
+            try:
+                self.listeners[i].put_nowait(msg)
+            except queue.Full:
+                del self.listeners[i]
+
+announcer = MessageAnnouncer()
 
 # The rest of your app code...
 def create_app(config_name='development'):
@@ -26,17 +48,30 @@ def create_app(config_name='development'):
     # Initialize database
     db.init_app(app)
     
-    # Register context processor
+    # Register context processor with request-scoped caching
     @app.context_processor
     def inject_user():
-        user = None
-        if 'user_id' in session:
-            user = User.query.get(session['user_id'])
-        return {'current_user': user}
+        if 'current_user' not in g:
+            g.current_user = User.query.get(session['user_id']) if 'user_id' in session else None
+        return {'current_user': g.current_user}
     
     # Create database tables
     with app.app_context():
         db.create_all()
+        
+        # Ensure chat messages table exists (since db.create_all() will handle it if entirely new,
+        # but if we need a safe migration similar to others, we can do it)
+        try:
+            db.session.execute(db.text("SELECT id FROM chat_messages LIMIT 1"))
+        except Exception:
+            db.session.rollback()
+            try:
+                # Actually create_all handles missing tables, but just in case
+                db.create_all()
+            except Exception as e:
+                print(f"Error checking chat messages: {e}")
+                db.session.rollback()
+                
         # Safe migration: Add user_id column to expenses table if it doesn't exist
         try:
             db.session.execute(db.text("SELECT user_id FROM expenses LIMIT 1"))
@@ -96,6 +131,30 @@ def create_app(config_name='development'):
         except Exception as e:
             print(f"Error backfilling meals: {e}")
             db.session.rollback()
+            
+        # Safe migration: Add avatar_seed column to users table if it doesn't exist
+        try:
+            db.session.execute(db.text("SELECT avatar_seed FROM users LIMIT 1"))
+        except Exception:
+            db.session.rollback()
+            try:
+                db.session.execute(db.text("ALTER TABLE users ADD COLUMN avatar_seed VARCHAR(100)"))
+                db.session.commit()
+            except Exception as e:
+                print(f"Error migrating database avatar_seed: {e}")
+                db.session.rollback()
+
+        # Safe migration: Add reply_to_id column to chat_messages table if it doesn't exist
+        try:
+            db.session.execute(db.text("SELECT reply_to_id FROM chat_messages LIMIT 1"))
+        except Exception:
+            db.session.rollback()
+            try:
+                db.session.execute(db.text("ALTER TABLE chat_messages ADD COLUMN reply_to_id INTEGER REFERENCES chat_messages(id)"))
+                db.session.commit()
+            except Exception as e:
+                print(f"Error migrating database reply_to_id: {e}")
+                db.session.rollback()
                 
         # Create default meal rate if doesn't exist
         if MealRate.query.first() is None:
@@ -196,13 +255,15 @@ def create_app(config_name='development'):
             return redirect(url_for('login'))
         
         return render_template('register.html')
-    @app.context_processor
-    def inject_potential_managers():
-        if 'user_id' in session:
-            user = User.query.get(session['user_id'])
-            if user and user.is_manager():
-                return dict(potential_managers=User.query.filter_by(role='member', is_active=True).all())
-        return dict(potential_managers=[])
+    @app.route('/api/potential-managers', methods=['GET'])
+    @manager_required
+    def get_potential_managers():
+        """API endpoint to fetch eligible members for manager role transfer"""
+        members = User.query.filter_by(role='member', is_active=True).all()
+        return jsonify({
+            'success': True,
+            'members': [{'id': m.id, 'name': m.name, 'email': m.email} for m in members]
+        })
 
     @app.route('/dashboard')
     @login_required
@@ -253,6 +314,9 @@ def create_app(config_name='development'):
         target_year = first_day.year
         target_month = first_day.month
         
+        # Pre-calculate monthly meal rate once to eliminate N+1 queries in user loop
+        current_monthly_rate = get_monthly_meal_rate(target_year, target_month)
+        
         # Calculate stats for each user (strictly monthly for meals and cost, overall for balance)
         user_stats = []
         for user in all_users:
@@ -268,7 +332,7 @@ def create_app(config_name='development'):
                 'user': user,
                 'daily_meals': [meals_data.get(user.id, {}).get(d, 0) for d in all_dates],
                 'total_meals': monthly_meals,
-                'meal_rate': get_monthly_meal_rate(target_year, target_month),
+                'meal_rate': current_monthly_rate,
                 'total_deposited': total_deposited,
                 'total_cost': monthly_cost,
                 'balance': balance,
@@ -599,6 +663,129 @@ def create_app(config_name='development'):
                                current_user=current_user,
                                history_months=history_months,
                                month_names=month_names)
+                               
+    @app.route('/chat')
+    @login_required
+    def chat_page():
+        """Chat Page - Real-time messaging"""
+        current_user = User.query.get(session['user_id'])
+        all_users = User.query.filter_by(is_active=True).all()
+        all_users_json = [{'id': u.id, 'name': u.name} for u in all_users]
+        return render_template('chat.html', current_user=current_user, all_users_json=all_users_json)
+        
+    @app.route('/api/chat/history', methods=['GET'])
+    @login_required
+    def chat_history():
+        """Get past chat messages"""
+        # Get the last 50 messages
+        messages = ChatMessage.query.order_by(ChatMessage.created_at.desc()).limit(50).all()
+        messages.reverse()
+        
+        history = []
+        for msg in messages:
+            reply_to_snippet = None
+            reply_to_name = None
+            if msg.reply_to_id and msg.reply_to:
+                reply_to_snippet = msg.reply_to.message[:50] + ('...' if len(msg.reply_to.message) > 50 else '')
+                reply_to_name = msg.reply_to.user.name
+                
+            history.append({
+                'id': msg.id,
+                'user_id': msg.user_id,
+                'user_name': msg.user.name,
+                'user_initial': msg.user.name[0].upper() if msg.user.name else '?',
+                'user_avatar_seed': msg.user.avatar_seed or msg.user.name,
+                'message': msg.message,
+                'reply_to_id': msg.reply_to_id,
+                'reply_to_snippet': reply_to_snippet,
+                'reply_to_name': reply_to_name,
+                'created_at': msg.created_at.strftime('%Y-%m-%dT%H:%M:%SZ')
+            })
+            
+        return jsonify({'success': True, 'messages': history})
+        
+    @app.route('/api/chat/send', methods=['POST'])
+    @login_required
+    def chat_send():
+        """Send a new chat message"""
+        current_user = User.query.get(session['user_id'])
+        data = request.json or {}
+        message_text = data.get('message', '').strip()
+        reply_to_id = data.get('reply_to_id')
+        
+        if not message_text:
+            return jsonify({'success': False, 'message': 'Message cannot be empty'}), 400
+            
+        msg = ChatMessage(user_id=current_user.id, message=message_text, reply_to_id=reply_to_id)
+        db.session.add(msg)
+        db.session.commit()
+        
+        # Parse mentions
+        mentioned_users = []
+        all_active = User.query.filter_by(is_active=True).all()
+        for u in all_active:
+            if f"@{u.name}" in message_text:
+                mentioned_users.append(u.id)
+                
+        reply_to_snippet = None
+        reply_to_name = None
+        if msg.reply_to_id and msg.reply_to:
+            reply_to_snippet = msg.reply_to.message[:50] + ('...' if len(msg.reply_to.message) > 50 else '')
+            reply_to_name = msg.reply_to.user.name
+        
+        msg_data = {
+            'id': msg.id,
+            'user_id': msg.user_id,
+            'user_name': msg.user.name,
+            'user_initial': msg.user.name[0].upper() if msg.user.name else '?',
+            'user_avatar_seed': msg.user.avatar_seed or msg.user.name,
+            'message': msg.message,
+            'reply_to_id': msg.reply_to_id,
+            'reply_to_snippet': reply_to_snippet,
+            'reply_to_name': reply_to_name,
+            'mentioned_users': list(set(mentioned_users)),
+            'created_at': msg.created_at.strftime('%Y-%m-%dT%H:%M:%SZ')
+        }
+        
+        # Broadcast message
+        announcer.announce(msg_data)
+        
+        return jsonify({'success': True, 'message': 'Message sent'})
+        
+    @app.route('/api/set-avatar-seed', methods=['POST'])
+    @login_required
+    def set_avatar_seed():
+        current_user = User.query.get(session['user_id'])
+        data = request.json or {}
+        seed = data.get('seed', '').strip()
+        
+        if not seed:
+            return jsonify({'success': False, 'message': 'Seed is required'}), 400
+            
+        current_user.avatar_seed = seed
+        db.session.commit()
+        
+        return jsonify({'success': True, 'message': 'Avatar updated successfully', 'seed': seed})
+
+    @app.route('/api/chat/stream')
+    @login_required
+    def chat_stream():
+        """Non-blocking SSE stream for receiving chat notifications"""
+        from flask import Response
+        def stream():
+            messages = announcer.listen()
+            try:
+                while True:
+                    try:
+                        msg = messages.get(timeout=2.0)
+                        yield f"data: {json.dumps(msg)}\n\n"
+                    except queue.Empty:
+                        # Send keep-alive heartbeat comment to detect disconnects and unblock threads
+                        yield ": keep-alive\n\n"
+            finally:
+                announcer.disconnect(messages)
+                
+        return Response(stream(), mimetype='text/event-stream')
    
     @app.route('/api/add-meal', methods=['POST'])
     @manager_required
@@ -876,7 +1063,4 @@ def create_app(config_name='development'):
 
 if __name__ == '__main__':
     app = create_app('development')
-    # Remove this line:
-    app.run(debug=True, host='0.0.0.0', port=5900)
-    # Add this instead:
-    # serve(app, host='127.0.0.1', port=5000)
+    app.run(debug=True, host='127.0.0.1', port=5000)

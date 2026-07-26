@@ -17,6 +17,7 @@ class User(db.Model):
     password_hash = db.Column(db.String(255), nullable=False)
     role = db.Column(db.String(20), default='member')  # 'member' or 'manager'
     is_active = db.Column(db.Boolean, default=True)
+    avatar_seed = db.Column(db.String(100), nullable=True)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     
     # Relationships
@@ -219,6 +220,24 @@ class DailyMenu(db.Model):
     
     def __repr__(self):
         return f'<DailyMenu {self.date}>'
+
+
+class ChatMessage(db.Model):
+    """Chat Message Model - for real-time hostel chat"""
+    __tablename__ = 'chat_messages'
+    
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
+    message = db.Column(db.Text, nullable=False)
+    reply_to_id = db.Column(db.Integer, db.ForeignKey('chat_messages.id'), nullable=True)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    
+    # Relationship
+    user = db.relationship('User', backref=db.backref('chat_messages', lazy=True, cascade='all, delete-orphan'))
+    reply_to = db.relationship('ChatMessage', remote_side=[id], backref=db.backref('replies', lazy=True))
+    
+    def __repr__(self):
+        return f'<ChatMessage {self.id} - {self.message[:20]}>'
 
 
 # Helper Functions

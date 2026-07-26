@@ -26,15 +26,6 @@
         {% endif %}
     </div>
 
-    <!-- Alert about status editing policy -->
-    <div class="p-4 bg-indigo-50/50 border border-indigo-100/60 dark:bg-indigo-950/20 dark:border-indigo-900/40 text-indigo-850 dark:text-indigo-300 rounded-2xl flex items-start space-x-3">
-        <span class="text-lg">ℹ️</span>
-        <div class="text-xs font-medium space-y-1">
-            <p class="font-bold">Meal Calculations Policy:</p>
-            <p>• Breakfast is computed at <strong>0.5 meal</strong>. Lunch and Dinner are computed at <strong>1.0 meal</strong> each.</p>
-            <p>• Lock Status: Once the Chef arrives, the Manager will lock editing for that meal slot. Locked statuses cannot be changed by members or managers.</p>
-        </div>
-    </div>
 
     <!-- Main Table Layout -->
     <div class="bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 rounded-2xl shadow-sm overflow-hidden">
@@ -168,6 +159,16 @@
                     {% endfor %}
                 </tbody>
             </table>
+        </div>
+    </div>
+
+    <!-- Alert about status editing policy -->
+    <div class="p-4 bg-indigo-50/50 border border-indigo-100/60 dark:bg-indigo-950/20 dark:border-indigo-900/40 text-indigo-850 dark:text-indigo-300 rounded-2xl flex items-start space-x-3 mt-6">
+        <span class="text-lg">ℹ️</span>
+        <div class="text-xs font-medium space-y-1">
+            <p class="font-bold">Meal Calculations Policy:</p>
+            <p>• Breakfast is computed at <strong>0.5 meal</strong>. Lunch and Dinner are computed at <strong>1.0 meal</strong> each.</p>
+            <p>• Lock Status: Once the Chef arrives, the Manager will lock editing for that meal slot. Locked statuses cannot be changed by members or managers.</p>
         </div>
     </div>
 </div>

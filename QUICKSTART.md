@@ -1,8 +1,9 @@
 # 🚀 QUICK START GUIDE
 
-## 5-Minute Setup
+## ⚡ 5-Minute Setup
 
-### Option 1: Automated Setup (Recommended)
+### Automated Setup (Recommended)
+Run the automated setup script to set up virtual environment, dependencies, and demo data:
 
 #### Windows:
 ```bash
@@ -14,13 +15,9 @@ python setup.py
 python3 setup.py
 ```
 
-This will:
-- ✅ Create virtual environment
-- ✅ Install all dependencies
-- ✅ Initialize demo database with sample data
-- ✅ Display credentials
+---
 
-### Option 2: Manual Setup
+### Manual Setup
 
 #### Step 1: Create Virtual Environment
 ```bash
@@ -48,192 +45,64 @@ python init_demo.py
 python app.py
 ```
 
-## Access the Application
+---
 
-1. Open browser: **http://localhost:5000**
-2. Login with demo credentials (see below)
+## 🌐 Accessing the Application
+
+Open your browser at: **http://localhost:5000** (or http://127.0.0.1:5000)
+
+---
 
 ## 🔐 Default Demo Credentials
 
 ### Manager (Admin)
 - **Email**: `manager@example.com`
 - **Password**: `password`
-- **Permissions**: Full access to manager panel
+- **Permissions**: Full management access (Meal locks, Menu, Deposits, Expenses, Role Transfer)
 
 ### Members
-- **Mehedi Hasan** → mehedi@example.com / password
-- **Arefin Ahmed** → arefin@example.com / password
-- **Ali Hassan** → ali@example.com / password
-- **Karim Khan** → karim@example.com / password
-
-**Permission**: View-only access to dashboard
+- **Mehedi Hasan** → `mehedi@example.com` / `password`
+- **Arefin Ahmed** → `arefin@example.com` / `password`
+- **Ali Hassan** → `ali@example.com` / `password`
+- **Karim Khan** → `karim@example.com` / `password`
 
 ---
 
-## 📚 Features Overview
+## 🛠️ Main Features & Navigation
 
-### 👥 Member Features
-- ✅ View dashboard with all members
-- ✅ Check daily meal counts
-- ✅ View personal statistics
-- ✅ Check account balance
-- ❌ Cannot edit any data
-
-### 🔧 Manager Features
-- ✅ Add daily meal counts for members
-- ✅ Add/withdraw money for members
-- ✅ Set meal rates dynamically
-- ✅ View financial reports
-- ✅ Manage all transactions
-- ✅ View member balances
-
----
-
-## 📊 Sample Data
-
-The demo automatically creates:
-- 1 Manager account
-- 4 Member accounts
-- ৳5000 initial deposit for each member
-- 5 days of sample meal data
-- Meal rate: ৳50 per meal
-
----
-
-## 💡 Common Tasks
-
-### Change Meal Rate (Manager)
-1. Login as manager
-2. Go to "Manager Panel"
-3. Enter new rate in "Set Meal Rate"
-4. Click "Set Rate"
-
-### Add Money for Member (Manager)
-1. Go to "Manager Panel"
-2. Click "Add Money" next to member name
-3. Select transaction type (Deposit/Withdrawal)
-4. Enter amount
-5. Click "Save"
-
-### Update Daily Meals (Manager)
-1. Go to "Manager Panel"
-2. Update meal count in the table
-3. Click "Update Meal"
-
-### View Statistics (Any User)
-1. Login
-2. Go to "Dashboard"
-3. View the table with all member data
-
----
-
-## 🔧 Configuration
-
-Edit `config.py` to change:
-```python
-SQLALCHEMY_DATABASE_URI = 'sqlite:///hostel_meals.db'  # Database location
-SECRET_KEY = 'change-this-key'  # Change for production!
-PERMANENT_SESSION_LIFETIME = timedelta(days=7)  # Session duration
-DEBUG = True  # Set to False for production
-```
+1. **📊 Dashboard**: Real-time member attendance totals, monthly filters, running balances, and hostel statistics.
+2. **🍽️ Meal Status**: Toggle daily Breakfast (0.5), Lunch (1.0), and Dinner (1.0) status. Managers can lock meal slots.
+3. **📋 Today's Meals**: Live breakdown of today's attendance and meal totals.
+4. **🍲 Today's Menu**: Weekly breakfast, lunch, and dinner menu planner.
+5. **💳 Transactions**: Complete expense log and member deposit/withdrawal history audit modal.
+6. **👥 Member List**: Unique auto-generated member IDs and manager role transfer tool.
+7. **🕰️ History**: Access past month sheets and record archives.
+8. **💬 Real-Time Chat**: Live chat room with audio notifications, `@mentions`, replies, custom avatars, and background SSE notifications.
 
 ---
 
 ## 🆘 Troubleshooting
 
-### Error: "ModuleNotFoundError: No module named 'flask'"
-**Solution**: 
+### Error: `ModuleNotFoundError: No module named 'flask'`
+Ensure your virtual environment is activated and run:
 ```bash
 pip install -r requirements.txt
 ```
 
-### Error: "Port 5000 already in use"
-**Solution**: Edit `app.py` and change port:
+### Error: `Port 5000 already in use`
+Change the port at the bottom of `app.py`:
 ```python
-app.run(debug=True, host='0.0.0.0', port=5001)
+app.run(debug=True, host='127.0.0.1', port=5001)
 ```
 
-### Error: "database is locked"
-**Solution**: Close other connections and try again. This is a SQLite limitation.
-
-### Need to reset database?
+### How to reset database completely:
 ```bash
-# Delete the database
-rm hostel_meals.db  # or del hostel_meals.db on Windows
+# Delete existing database file
+# Windows:
+del instance\hostel_meals.db
+# Linux/Mac:
+rm instance/hostel_meals.db
 
-# Reinitialize
+# Re-run demo initializer
 python init_demo.py
 ```
-
----
-
-## 📁 File Structure
-
-```
-hostel_meal_system/
-├── app.py                 # Main Flask app
-├── config.py              # Configuration
-├── models.py              # Database models
-├── init_demo.py           # Demo data generator
-├── setup.py               # Setup script
-├── requirements.txt       # Dependencies
-├── README.md              # Full documentation
-├── QUICKSTART.md          # This file
-├── hostel_meals.db        # SQLite database (created)
-├── templates/
-│   ├── base.html
-│   ├── login.html
-│   ├── register.html
-│   ├── dashboard.html
-│   └── manager.html
-└── static/                # CSS, JavaScript, images
-```
-
----
-
-## 🎯 Next Steps
-
-1. **Explore the Dashboard**: Login as a member and view all data
-2. **Try Manager Panel**: Login as manager and update meals/money
-3. **Test Calculations**: Check how meal rate affects costs
-4. **Create Custom Data**: Register new users and add transactions
-
----
-
-## ✨ Key Features Explained
-
-### Meal Rate Calculation
-```
-Meal Rate = Total Expense / Total Meals
-```
-- Automatically calculated by the system
-- Manager can update at any time
-- Applied to all members
-
-### Cost Calculation
-```
-User's Cost = Total Meals × Meal Rate
-```
-- Updated in real-time
-- Shown in dashboard
-
-### Balance Calculation
-```
-Balance = Deposits - Cost - Withdrawals
-```
-- Updated instantly
-- Negative balance shows in red
-- Positive balance shows in green
-
----
-
-## 📞 Support
-
-For issues or questions:
-1. Check README.md for detailed documentation
-2. Review QUICKSTART.md (this file)
-3. Check application logs in terminal
-
----
-
-**Happy Hostel Managing! 🏠**

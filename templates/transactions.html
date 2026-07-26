@@ -27,11 +27,11 @@
     </div>
 
     <!-- Toggle Tabs -->
-    <div class="border-b border-slate-200 dark:border-slate-800 flex space-x-6 text-sm font-bold">
-        <button id="tabExpensesBtn" onclick="switchTab('expenses')" class="pb-3 border-b-2 border-indigo-650 text-indigo-600 dark:text-indigo-400">
+    <div class="flex space-x-2 text-sm font-bold mb-4">
+        <button id="tabExpensesBtn" onclick="switchTab('expenses')" class="px-4 py-2.5 bg-indigo-50/80 dark:bg-indigo-900/30 text-indigo-650 dark:text-indigo-400 rounded-xl transition-colors">
             Hostel Purchase &amp; Expense History 🛒
         </button>
-        <button id="tabTransactionsBtn" onclick="switchTab('transactions')" class="pb-3 border-b-2 border-transparent text-slate-550 dark:text-slate-450 hover:text-slate-800 dark:hover:text-slate-200">
+        <button id="tabTransactionsBtn" onclick="switchTab('transactions')" class="px-4 py-2.5 text-slate-550 dark:text-slate-450 hover:bg-slate-50 dark:hover:bg-slate-800/50 rounded-xl transition-colors">
             Member Deposits/Withdrawals 💳
         </button>
     </div>
@@ -241,14 +241,17 @@
         const expensesTab = document.getElementById('expensesTab');
         const transactionsTab = document.getElementById('transactionsTab');
 
+        const activeClass = 'px-4 py-2.5 bg-indigo-50/80 dark:bg-indigo-900/30 text-indigo-650 dark:text-indigo-400 rounded-xl transition-colors';
+        const inactiveClass = 'px-4 py-2.5 text-slate-550 dark:text-slate-450 hover:bg-slate-50 dark:hover:bg-slate-800/50 rounded-xl transition-colors';
+
         if (tab === 'expenses') {
-            expensesBtn.className = 'pb-3 border-b-2 border-indigo-650 text-indigo-650 dark:text-indigo-400';
-            transactionsBtn.className = 'pb-3 border-b-2 border-transparent text-slate-550 dark:text-slate-450 hover:text-slate-800 dark:hover:text-slate-200';
+            expensesBtn.className = activeClass;
+            transactionsBtn.className = inactiveClass;
             expensesTab.classList.remove('hidden');
             transactionsTab.classList.add('hidden');
         } else {
-            transactionsBtn.className = 'pb-3 border-b-2 border-indigo-650 text-indigo-650 dark:text-indigo-400';
-            expensesBtn.className = 'pb-3 border-b-2 border-transparent text-slate-550 dark:text-slate-450 hover:text-slate-800 dark:hover:text-slate-200';
+            transactionsBtn.className = activeClass;
+            expensesBtn.className = inactiveClass;
             transactionsTab.classList.remove('hidden');
             expensesTab.classList.add('hidden');
         }

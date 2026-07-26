@@ -1,0 +1,522 @@
+{% extends 'base.html' %}
+{% block title %}Hostel Chat - Plate & Spoon{% endblock %}
+
+{% block content %}
+<style>
+    .chat-bg-static {
+        background-color: #efeae2;
+        background-image: linear-gradient(rgba(255, 255, 255, 0.7), rgba(255, 255, 255, 0.7)), url('https://images.pexels.com/photos/301717/pexels-photo-301717.jpeg');
+        background-size: cover;
+        background-position: center;
+        background-attachment: fixed;
+    }
+    .dark .chat-bg-static {
+        background-color: #0b141a;
+        background-image: linear-gradient(rgba(11, 20, 26, 0.85), rgba(11, 20, 26, 0.85)), url('https://images.pexels.com/photos/301717/pexels-photo-301717.jpeg');
+        background-size: cover;
+        background-position: center;
+        background-attachment: fixed;
+    }
+</style>
+<!-- Use dvh for mobile keyboard support -->
+<div
+    class="flex flex-col h-[calc(100vh-7rem)] h-[calc(100dvh-7rem)] bg-white dark:bg-slate-900 rounded-2xl shadow-premium dark:shadow-premium-dark border border-slate-100 dark:border-slate-800 overflow-hidden animate-scale-up">
+    <!-- Chat Header -->
+    <div
+        class="px-6 py-4 border-b border-slate-100 dark:border-slate-800 bg-slate-50 dark:bg-slate-950 flex justify-between items-center z-10 shadow-sm">
+        <div class="flex items-center space-x-3">
+            <div
+                class="w-10 h-10 rounded-lg bg-gradient-to-tr from-indigo-500 to-blue-500 flex items-center justify-center text-white shadow-sm border border-indigo-400/20">
+                <svg xmlns="http://www.w3.org/2000/svg" class="w-6 h-6" fill="none" viewBox="0 0 24 24"
+                    stroke="currentColor" stroke-width="2">
+                    <path stroke-linecap="round" stroke-linejoin="round"
+                        d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z" />
+                </svg>
+            </div>
+            <div>
+                <h2 class="font-bold text-slate-800 dark:text-slate-100">Hostel Group Chat</h2>
+                <p class="text-xs text-green-600 dark:text-green-400 flex items-center">
+                    <span class="w-2 h-2 rounded-full bg-green-500 mr-1.5 animate-pulse"></span>
+                    Live Updates Active
+                </p>
+            </div>
+        </div>
+
+        <!-- Options Menu -->
+        <div class="relative">
+            <button onclick="toggleChatOptions()"
+                class="p-2 rounded-lg border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 transition shadow-sm">
+                <span class="font-semibold text-sm flex items-center gap-2">Options ⚙️</span>
+            </button>
+            <div id="chatOptionsMenu"
+                class="hidden absolute right-0 mt-2 w-56 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl shadow-lg z-20 py-1">
+                <button onclick="openStickerModal()"
+                    class="w-full text-left px-4 py-2.5 text-sm text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700 font-medium transition-colors">
+                    🖼️ Select profile sticker
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Chat Messages Area -->
+    <div id="chatMessages"
+        class="flex-1 overflow-y-auto p-4 sm:p-6 space-y-4 chat-bg-static scroll-smooth">
+        <!-- Messages will be injected here by JavaScript -->
+        <div class="text-center text-slate-400 text-sm py-10" id="loadingMessages">
+            <div
+                class="inline-block w-6 h-6 border-2 border-indigo-500 border-t-transparent rounded-full animate-spin mb-2">
+            </div>
+            <p>Loading previous messages...</p>
+        </div>
+    </div>
+
+    <!-- Chat Input Area -->
+    <div
+        class="p-4 bg-white dark:bg-slate-950 border-t border-slate-100 dark:border-slate-800 shadow-[0_-10px_15px_-3px_rgba(0,0,0,0.02)] relative">
+        <!-- Reply Banner -->
+        <div id="replyBanner"
+            class="hidden flex items-center justify-between bg-slate-50 dark:bg-slate-900 border-l-4 border-indigo-500 rounded-r-lg p-2 mb-2 max-w-4xl mx-auto">
+            <div class="flex-1 overflow-hidden">
+                <p class="text-xs font-semibold text-indigo-600 dark:text-indigo-400">Replying to <span
+                        id="replyName"></span></p>
+                <p class="text-xs text-slate-500 dark:text-slate-400 truncate" id="replyText"></p>
+            </div>
+            <button type="button" onclick="cancelReply()"
+                class="p-1 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24"
+                    stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                </svg>
+            </button>
+        </div>
+
+        <!-- Mention Dropdown -->
+        <div id="mentionDropdown"
+            class="hidden absolute bottom-full mb-2 left-4 w-64 max-h-48 overflow-y-auto bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl shadow-lg z-30 divide-y divide-slate-100 dark:divide-slate-700/50">
+            <!-- Populated via JS -->
+        </div>
+
+        <form id="chatForm" class="flex items-end space-x-2 sm:space-x-4 max-w-4xl mx-auto">
+            <div class="relative flex-1">
+                <textarea id="messageInput" rows="1"
+                    class="w-full pl-4 pr-12 py-3 bg-slate-100 dark:bg-slate-800 border-transparent focus:border-indigo-500 focus:bg-white dark:focus:bg-slate-900 focus:ring-0 rounded-2xl resize-none transition-all duration-200 text-slate-800 dark:text-slate-100 placeholder-slate-400 shadow-inner max-h-32"
+                    placeholder="Type a message... (@ to mention)" required></textarea>
+            </div>
+            <button type="submit" id="sendBtn"
+                class="flex-shrink-0 w-12 h-12 flex items-center justify-center bg-indigo-600 hover:bg-indigo-700 text-white rounded-2xl shadow-md hover:shadow-lg hover:shadow-indigo-500/30 transition-all duration-200 transform hover:-translate-y-0.5 active:translate-y-0">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 ml-1" fill="none" viewBox="0 0 24 24"
+                    stroke="currentColor" stroke-width="2">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
+                </svg>
+            </button>
+        </form>
+    </div>
+</div>
+
+<!-- Sticker Modal -->
+<div id="stickerModal"
+    class="hidden fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4 transition-all">
+    <div
+        class="bg-white dark:bg-slate-900 rounded-2xl w-full max-w-4xl max-h-[85vh] flex flex-col shadow-premium border border-slate-200 dark:border-slate-800 animate-scale-up">
+        <div
+            class="p-5 border-b border-slate-100 dark:border-slate-800 flex justify-between items-center bg-slate-50 dark:bg-slate-950 rounded-t-2xl">
+            <h3 class="font-bold text-lg text-slate-800 dark:text-slate-100">Select Profile Sticker</h3>
+            <button onclick="closeStickerModal()"
+                class="text-slate-400 hover:text-slate-800 dark:hover:text-slate-100 text-2xl font-bold">&times;</button>
+        </div>
+        <div class="p-4 sm:p-6 overflow-y-auto flex-1 grid grid-cols-4 sm:grid-cols-6 md:grid-cols-8 lg:grid-cols-10 gap-3"
+            id="stickerGrid">
+            <!-- Stickers injected here via JS -->
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        const chatMessages = document.getElementById('chatMessages');
+        const chatForm = document.getElementById('chatForm');
+        const messageInput = document.getElementById('messageInput');
+        const loadingDiv = document.getElementById('loadingMessages');
+        const currentUserId = {{ current_user.id }};
+    const allUsers = {{ all_users_json| tojson | safe if all_users_json else '[]' }};
+    let replyingToId = null;
+
+    window.cancelReply = function () {
+        replyingToId = null;
+        document.getElementById('replyBanner').classList.add('hidden');
+    };
+
+    window.replyTo = function (msgId, name, snippet) {
+        replyingToId = msgId;
+        document.getElementById('replyName').textContent = name;
+        document.getElementById('replyText').textContent = snippet;
+        document.getElementById('replyBanner').classList.remove('hidden');
+        messageInput.focus();
+    };
+
+    window.toggleReplyMenu = function (e, id) {
+        e.stopPropagation();
+        // hide any other open menus
+        document.querySelectorAll('[id^="replyMenu-"]').forEach(el => {
+            if (el.id !== 'replyMenu-' + id) el.classList.add('hidden');
+        });
+        const menu = document.getElementById('replyMenu-' + id);
+        if (menu) {
+            menu.classList.toggle('hidden');
+        }
+    };
+
+    // close reply menus when clicking outside
+    document.addEventListener('click', function (e) {
+        // don't close if clicking inside a menu
+        if (e.target.closest('[id^="replyMenu-"]')) return;
+        document.querySelectorAll('[id^="replyMenu-"]').forEach(el => {
+            el.classList.add('hidden');
+        });
+    });
+
+    window.scrollToMessage = function (id) {
+        const target = document.getElementById('message-' + id);
+        if (target) {
+            target.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            target.classList.add('bg-indigo-100', 'dark:bg-indigo-900/50', 'rounded-2xl', 'transition-colors', 'duration-500');
+            setTimeout(() => {
+                target.classList.remove('bg-indigo-100', 'dark:bg-indigo-900/50', 'rounded-2xl');
+            }, 1500);
+        }
+    };
+
+    function escapeHtml(unsafe) {
+        return (unsafe || "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#039;");
+    }
+
+    // Auto-resize textarea and Mention logic
+    let isMentioning = false;
+    messageInput.addEventListener('input', function (e) {
+        this.style.height = 'auto';
+        this.style.height = (this.scrollHeight < 128 ? this.scrollHeight : 128) + 'px';
+
+        const text = this.value;
+        const cursorPos = this.selectionStart;
+        const textBeforeCursor = text.substring(0, cursorPos);
+        const mentionMatch = textBeforeCursor.match(/@([a-zA-Z0-9_\s]*)$/);
+
+        const dropdown = document.getElementById('mentionDropdown');
+        if (mentionMatch) {
+            isMentioning = true;
+            const search = mentionMatch[1].toLowerCase();
+            const matches = allUsers.filter(u => u.name.toLowerCase().includes(search));
+
+            if (matches.length > 0) {
+                dropdown.innerHTML = matches.map(u => `
+                        <button type="button" class="w-full text-left px-4 py-2 text-sm text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700 focus:bg-slate-50 focus:outline-none" onclick="insertMention('${escapeHtml(u.name)}')">
+                            <span class="font-semibold">${escapeHtml(u.name)}</span>
+                        </button>
+                    `).join('');
+                dropdown.classList.remove('hidden');
+            } else {
+                dropdown.classList.add('hidden');
+            }
+        } else {
+            isMentioning = false;
+            dropdown.classList.add('hidden');
+        }
+    });
+
+    window.insertMention = function (name) {
+        const text = messageInput.value;
+        const cursorPos = messageInput.selectionStart;
+        const textBeforeCursor = text.substring(0, cursorPos);
+        const textAfterCursor = text.substring(cursorPos);
+
+        const mentionMatch = textBeforeCursor.match(/@([a-zA-Z0-9_\s]*)$/);
+        if (mentionMatch) {
+            const newTextBefore = textBeforeCursor.substring(0, mentionMatch.index) + '@' + name + ' ';
+            messageInput.value = newTextBefore + textAfterCursor;
+            messageInput.focus();
+            // trigger input event to resize textarea
+            messageInput.dispatchEvent(new Event('input'));
+        }
+        document.getElementById('mentionDropdown').classList.add('hidden');
+        isMentioning = false;
+    };
+
+    // Handle Enter key to send (Shift+Enter for new line)
+    messageInput.addEventListener('keydown', function (e) {
+        if (e.key === 'Enter' && !e.shiftKey) {
+            e.preventDefault();
+            chatForm.dispatchEvent(new Event('submit'));
+        }
+    });
+
+    function scrollToBottom(smooth = true) {
+        chatMessages.scrollTo({
+            top: chatMessages.scrollHeight,
+            behavior: smooth ? 'smooth' : 'auto'
+        });
+    }
+
+    function appendMessage(msg, isHistory = false) {
+        const isMe = msg.user_id === currentUserId;
+
+        const msgDiv = document.createElement('div');
+        msgDiv.id = `message-${msg.id}`;
+        msgDiv.className = `flex w-full ${isMe ? 'justify-end' : 'justify-start'} animate-fade-in p-1 -mx-1`;
+
+        const msgDate = new Date(msg.created_at);
+        const today = new Date();
+        let timeStr;
+
+        if (msgDate.toDateString() === today.toDateString()) {
+            timeStr = msgDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+        } else {
+            timeStr = msgDate.toLocaleDateString([], { month: 'short', day: 'numeric' }) + ', ' +
+                msgDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+        }
+
+        let safeMessage = escapeHtml(msg.message);
+        // format message text to highlight mentions
+        let formattedMsg = safeMessage.replace(/@([a-zA-Z0-9_]+(?:\s[a-zA-Z0-9_]+)?)/g, match => {
+            const mentionClass = isMe
+                ? "text-indigo-50 bg-indigo-500/40 font-bold px-1 rounded cursor-pointer"
+                : "text-indigo-500 dark:text-indigo-400 font-bold bg-indigo-500/10 px-1 rounded cursor-pointer";
+            return `<span class="${mentionClass}">${match}</span>`;
+        });
+
+        let replyHtml = '';
+        if (msg.reply_to_snippet) {
+            const replyClass = isMe
+                ? "cursor-pointer hover:bg-black/30 transition-colors mb-1 p-2 bg-black/20 rounded-lg border-l-2 border-indigo-300 text-xs text-indigo-50 opacity-90 max-w-full truncate"
+                : "cursor-pointer hover:bg-black/20 dark:hover:bg-white/20 transition-colors mb-1 p-2 bg-black/10 dark:bg-white/10 rounded-lg border-l-2 border-indigo-400 text-xs text-slate-600 dark:text-slate-300 opacity-90 max-w-full truncate";
+            replyHtml = `
+                    <div onclick="scrollToMessage(${msg.reply_to_id})" class="${replyClass}">
+                        <span class="font-semibold">${escapeHtml(msg.reply_to_name)}</span>: ${escapeHtml(msg.reply_to_snippet)}
+                    </div>
+                `;
+        }
+
+        // Options menu HTML (for reply)
+        let optionsHtml = `
+                <div class="relative group/menu inline-block">
+                    <button type="button" onclick="toggleReplyMenu(event, ${msg.id})" class="p-1 text-slate-300 hover:text-slate-500 dark:text-slate-600 dark:hover:text-slate-400 opacity-0 group-hover:opacity-100 transition-opacity">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 12h.01M12 12h.01M19 12h.01M6 12a1 1 0 11-2 0 1 1 0 012 0zm7 0a1 1 0 11-2 0 1 1 0 012 0zm7 0a1 1 0 11-2 0 1 1 0 012 0z" /></svg>
+                    </button>
+                    <div id="replyMenu-${msg.id}" class="hidden absolute ${isMe ? 'right-0' : 'left-0'} bottom-full mb-1 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 shadow-md rounded-lg py-1 z-50 w-24">
+                        <button type="button" onclick="replyTo(${msg.id}, '${escapeHtml(msg.user_name).replace(/'/g, "\\'")}', '${escapeHtml(msg.message).replace(/'/g, "\\'").replace(/\n/g, " ").substring(0, 50)}'); toggleReplyMenu(event, ${msg.id})" class="w-full text-left px-3 py-1.5 text-xs text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700">Reply</button>
+                    </div>
+                </div>
+            `;
+
+        if (isMe) {
+            msgDiv.innerHTML = `
+                    <div class="flex flex-col max-w-[75%] sm:max-w-[65%] items-end space-y-1 group">
+                        <div class="flex items-center space-x-2">
+                            ${optionsHtml}
+                            <div class="px-4 py-2.5 bg-indigo-600 text-white rounded-2xl rounded-tr-sm shadow-sm">
+                                ${replyHtml}
+                                <p class="text-sm whitespace-pre-wrap break-words leading-relaxed">${formattedMsg}</p>
+                            </div>
+                        </div>
+                        <span class="text-[10px] text-slate-400 font-medium">${timeStr}</span>
+                    </div>
+                `;
+        } else {
+            msgDiv.innerHTML = `
+                    <div class="flex items-end space-x-2 max-w-[75%] sm:max-w-[65%] group">
+                        <img src="https://api.dicebear.com/9.x/lorelei/svg?seed=${encodeURIComponent(msg.user_avatar_seed || msg.user_name)}" 
+                             alt="${escapeHtml(msg.user_name)}'s avatar" 
+                             class="w-8 h-8 rounded-full bg-slate-200 dark:bg-slate-700 flex-shrink-0 object-cover shadow-sm border border-slate-300 dark:border-slate-600">
+                        <div class="flex flex-col space-y-1">
+                            <span class="text-[10px] text-slate-500 font-medium ml-1">${escapeHtml(msg.user_name)}</span>
+                            <div class="flex items-center space-x-2">
+                                <div class="px-4 py-2.5 bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-200 rounded-2xl rounded-tl-sm shadow-sm border border-slate-100 dark:border-slate-700/50">
+                                    ${replyHtml}
+                                    <p class="text-sm whitespace-pre-wrap break-words leading-relaxed">${formattedMsg}</p>
+                                </div>
+                                ${optionsHtml}
+                            </div>
+                            <span class="text-[10px] text-slate-400 font-medium ml-1">${timeStr}</span>
+                        </div>
+                    </div>
+                `;
+        }
+
+        chatMessages.appendChild(msgDiv);
+        if (!isHistory) {
+            scrollToBottom();
+        }
+    }
+
+    // Load History
+    fetch("{{ url_for('chat_history') }}")
+        .then(res => res.json())
+        .then(data => {
+            if (loadingDiv) loadingDiv.remove();
+
+            if (data.success && data.messages.length > 0) {
+                data.messages.forEach(msg => appendMessage(msg, true));
+            } else if (data.messages.length === 0) {
+                const emptyState = document.createElement('div');
+                emptyState.className = "text-center text-slate-400 text-sm py-10";
+                emptyState.innerHTML = "No messages yet. Say hello!";
+                chatMessages.appendChild(emptyState);
+            }
+
+            // Allow DOM to update before scrolling
+            setTimeout(() => scrollToBottom(false), 50);
+        })
+        .catch(err => {
+            console.error("Failed to load history", err);
+            if (loadingDiv) {
+                loadingDiv.innerHTML = "Failed to load messages. Please refresh.";
+                loadingDiv.classList.add("text-red-500");
+            }
+        });
+
+    // Initialize Server-Sent Events (SSE)
+    const sse = new EventSource("{{ url_for('chat_stream') }}");
+
+    sse.onmessage = function (event) {
+        const msg = JSON.parse(event.data);
+
+        // Remove empty state if present
+        if (chatMessages.innerText.includes("No messages yet")) {
+            chatMessages.innerHTML = '';
+        }
+
+        appendMessage(msg);
+
+        if (msg.user_id !== currentUserId) {
+            // Remove badges from sidebars if we are already in chat
+            const badges = document.querySelectorAll('.chat-badge');
+            badges.forEach(b => b.classList.add('hidden'));
+
+            if (document.hidden && window.playNotificationSound) {
+                window.playNotificationSound();
+            }
+
+            // Notification API if page is not visible, ONLY if mentioned
+            const isMentioned = msg.mentioned_users && msg.mentioned_users.includes(currentUserId);
+            if (isMentioned && document.hidden && "Notification" in window && Notification.permission === "granted") {
+                new Notification(msg.user_name + " mentioned you", {
+                    body: msg.message,
+                    icon: "{{ url_for('static', filename='favicon.svg') }}"
+                });
+            }
+        }
+    };
+
+    sse.onerror = function () {
+        console.log("SSE Connection lost. Reconnecting...");
+    };
+
+    // Handle Form Submit
+    chatForm.addEventListener('submit', function (e) {
+        e.preventDefault();
+        const text = messageInput.value.trim();
+        if (!text) return;
+
+        // Clear input immediately for better UX
+        messageInput.value = '';
+        messageInput.style.height = 'auto'; // reset height
+
+        fetch("{{ url_for('chat_send') }}", {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ message: text, reply_to_id: replyingToId })
+        })
+            .then(res => res.json())
+            .then(data => {
+                if (!data.success) {
+                    alert(data.message || "Failed to send message");
+                }
+                cancelReply();
+            })
+            .catch(err => {
+                console.error("Error sending message", err);
+            });
+    });
+
+    // Request Notification Permission on load if not asked
+    if ("Notification" in window) {
+        if (Notification.permission !== "granted" && Notification.permission !== "denied") {
+            Notification.requestPermission();
+        }
+    }
+
+    // Adjust for mobile keyboard by scrolling to bottom when window resizes
+    window.addEventListener('resize', function () {
+        scrollToBottom(false);
+    });
+    if (window.visualViewport) {
+        window.visualViewport.addEventListener('resize', function () {
+            scrollToBottom(false);
+        });
+    }
+
+    function toggleChatOptions() {
+        document.getElementById('chatOptionsMenu').classList.toggle('hidden');
+    }
+
+    function openStickerModal() {
+        document.getElementById('chatOptionsMenu').classList.add('hidden');
+        document.getElementById('stickerModal').classList.remove('hidden');
+
+        const grid = document.getElementById('stickerGrid');
+        if (grid.children.length === 0) {
+            grid.innerHTML = '<div class="col-span-full text-center text-slate-400 py-10">Loading stickers...</div>';
+            setTimeout(() => {
+                let html = '';
+                for (let i = 1; i <= 100; i++) {
+                    const seed = "Sticker_" + i;
+                    html += `
+                            <div onclick="selectSticker('${seed}')" class="cursor-pointer hover:scale-110 transition transform rounded-xl border-2 border-transparent hover:border-indigo-500 overflow-hidden bg-slate-100 dark:bg-slate-800 p-1 aspect-square flex items-center justify-center shadow-sm">
+                                <img src="https://api.dicebear.com/9.x/lorelei/svg?seed=${seed}" alt="Sticker ${i}" loading="lazy" class="w-full h-full object-cover">
+                            </div>
+                        `;
+                }
+                grid.innerHTML = html;
+            }, 100);
+        }
+    }
+
+    function closeStickerModal() {
+        document.getElementById('stickerModal').classList.add('hidden');
+    }
+
+    function selectSticker(seed) {
+        fetch("{{ url_for('set_avatar_seed') }}", {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ seed: seed })
+        })
+            .then(res => res.json())
+            .then(data => {
+                if (data.success) {
+                    window.location.reload();
+                } else {
+                    alert('Error: ' + data.message);
+                }
+            });
+    }
+
+    // click outside to close options
+    document.addEventListener('click', (e) => {
+        const menu = document.getElementById('chatOptionsMenu');
+        const btn = menu?.previousElementSibling;
+        if (menu && !menu.classList.contains('hidden') && !menu.contains(e.target) && btn && !btn.contains(e.target)) {
+            menu.classList.add('hidden');
+        }
+    });
+
+    window.toggleChatOptions = toggleChatOptions;
+    window.openStickerModal = openStickerModal;
+    window.closeStickerModal = closeStickerModal;
+    window.selectSticker = selectSticker;
+    });
+</script>
+{% endblock %}
