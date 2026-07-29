@@ -34,8 +34,26 @@
                     fontFamily: {
                         sans: ['"Plus Jakarta Sans"', 'sans-serif'],
                     },
+                    colors: {
+                        slate: {
+                            50: '#e4ebf1', // Dribbble page background
+                            100: '#dce5ec',
+                            200: '#c5d1de',
+                            800: '#1c2a3a', // Dribbble dark text
+                            900: '#0f172a',
+                        },
+                        indigo: {
+                            400: '#7c3aed',
+                            500: '#6366f1',
+                            600: '#5d5fef', // Dribbble vibrant primary
+                        }
+                    },
                     boxShadow: {
-                        'premium': '0 10px 30px -10px rgba(0, 0, 0, 0.08), 0 1px 3px rgba(0, 0, 0, 0.02)',
+                        'sm': '0 4px 10px rgba(112, 128, 175, 0.1)',
+                        'md': '0 10px 20px rgba(112, 128, 175, 0.12)',
+                        'lg': '0 15px 30px rgba(112, 128, 175, 0.15)',
+                        'xl': '0 20px 40px rgba(112, 128, 175, 0.15)',
+                        'premium': '10px 10px 30px rgba(112, 128, 175, 0.15), -10px -10px 30px rgba(255, 255, 255, 0.8)', // Neumorphic touch
                         'premium-dark': '0 10px 30px -10px rgba(0, 0, 0, 0.37), 0 1px 3px rgba(0, 0, 0, 0.1)',
                     }
                 }
@@ -189,6 +207,13 @@
         .dark .hamburger-btn:hover {
             background-color: #334155;
         }
+
+        /* View Transitions for Dark Mode */
+        ::view-transition-old(root),
+        ::view-transition-new(root) {
+            animation: none;
+            mix-blend-mode: normal;
+        }
     </style>
 </head>
 
@@ -204,7 +229,7 @@
         <div class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm transition-opacity" onclick="toggleMobileSidebar(false)"></div>
         
         <!-- Drawer content -->
-        <div class="fixed inset-y-0 left-0 flex max-w-xs w-full bg-white/40 text-slate-800 dark:bg-slate-950/40 backdrop-blur-2xl border-r border-slate-200/50 dark:border-slate-800/50 rounded-r-[1.5rem] overflow-hidden transition transform -translate-x-full duration-300 ease-in-out" id="mobileSidebarContent">
+        <div class="fixed inset-y-0 left-0 flex max-w-xs w-full bg-white/90 backdrop-blur-xl border-r border-slate-200/60 shadow-[4px_0_24px_rgba(112,128,175,0.15)] text-slate-800 dark:bg-slate-900/95 dark:border-slate-800/60 dark:text-slate-100 rounded-none overflow-hidden transition transform -translate-x-full duration-300 ease-in-out" id="mobileSidebarContent">
             <div class="flex flex-col flex-1 h-full min-h-screen">
                 <!-- Sidebar Header -->
                 <div class="flex items-center justify-between h-16 px-6 border-b border-slate-200/50 dark:border-slate-800/50 bg-transparent">
@@ -217,29 +242,29 @@
                 
                 <!-- Navigation links -->
                 <nav class="flex-1 px-4 py-4 space-y-1.5 overflow-y-auto">
-                    <a href="{{ url_for('dashboard') }}" class="flex items-center px-4 py-3 text-sm font-semibold rounded-xl transition duration-150 {% if request.endpoint == 'dashboard' %}bg-white/80 dark:bg-white/10 text-indigo-600 dark:text-indigo-300 border border-slate-200/80 dark:border-white/15 shadow-sm backdrop-blur-md font-bold{% else %}text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 hover:text-slate-900 dark:hover:text-slate-100{% endif %}">
+                    <a href="{{ url_for('dashboard') }}" class="flex items-center px-4 py-3 text-sm font-semibold rounded-xl transition duration-150 {% if request.endpoint == 'dashboard' %}bg-white dark:bg-slate-800 text-slate-900 dark:text-white shadow-premium dark:shadow-none font-bold{% else %}text-slate-600 dark:text-slate-400 hover:bg-white/60 dark:hover:bg-slate-800/60 hover:text-slate-900 dark:hover:text-slate-100{% endif %}">
                         <span class="mr-3 text-base">📊</span> Dashboard
                     </a>
                     {% if current_user.is_approved %}
-                    <a href="{{ url_for('meal_status') }}" class="flex items-center px-4 py-3 text-sm font-semibold rounded-xl transition duration-150 {% if request.endpoint == 'meal_status' %}bg-white/80 dark:bg-white/10 text-indigo-600 dark:text-indigo-300 border border-slate-200/80 dark:border-white/15 shadow-sm backdrop-blur-md font-bold{% else %}text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 hover:text-slate-900 dark:hover:text-slate-100{% endif %}">
+                    <a href="{{ url_for('meal_status') }}" class="flex items-center px-4 py-3 text-sm font-semibold rounded-xl transition duration-150 {% if request.endpoint == 'meal_status' %}bg-white dark:bg-slate-800 text-slate-900 dark:text-white shadow-premium dark:shadow-none font-bold{% else %}text-slate-600 dark:text-slate-400 hover:bg-white/60 dark:hover:bg-slate-800/60 hover:text-slate-900 dark:hover:text-slate-100{% endif %}">
                         <span class="mr-3 text-base">🍽️</span> Meal Status
                     </a>
-                    <a href="{{ url_for('todays_meals') }}" class="flex items-center px-4 py-3 text-sm font-semibold rounded-xl transition duration-150 {% if request.endpoint == 'todays_meals' %}bg-white/80 dark:bg-white/10 text-indigo-600 dark:text-indigo-300 border border-slate-200/80 dark:border-white/15 shadow-sm backdrop-blur-md font-bold{% else %}text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 hover:text-slate-900 dark:hover:text-slate-100{% endif %}">
+                    <a href="{{ url_for('todays_meals') }}" class="flex items-center px-4 py-3 text-sm font-semibold rounded-xl transition duration-150 {% if request.endpoint == 'todays_meals' %}bg-white dark:bg-slate-800 text-slate-900 dark:text-white shadow-premium dark:shadow-none font-bold{% else %}text-slate-600 dark:text-slate-400 hover:bg-white/60 dark:hover:bg-slate-800/60 hover:text-slate-900 dark:hover:text-slate-100{% endif %}">
                         <span class="mr-3 text-base">📋</span> Today's Meals
                     </a>
-                    <a href="{{ url_for('menu') }}" class="flex items-center px-4 py-3 text-sm font-semibold rounded-xl transition duration-150 {% if request.endpoint == 'menu' %}bg-white/80 dark:bg-white/10 text-indigo-600 dark:text-indigo-300 border border-slate-200/80 dark:border-white/15 shadow-sm backdrop-blur-md font-bold{% else %}text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 hover:text-slate-900 dark:hover:text-slate-100{% endif %}">
+                    <a href="{{ url_for('menu') }}" class="flex items-center px-4 py-3 text-sm font-semibold rounded-xl transition duration-150 {% if request.endpoint == 'menu' %}bg-white dark:bg-slate-800 text-slate-900 dark:text-white shadow-premium dark:shadow-none font-bold{% else %}text-slate-600 dark:text-slate-400 hover:bg-white/60 dark:hover:bg-slate-800/60 hover:text-slate-900 dark:hover:text-slate-100{% endif %}">
                         <span class="mr-3 text-base">🍲</span> Today's Menu
                     </a>
-                    <a href="{{ url_for('transactions_page') }}" class="flex items-center px-4 py-3 text-sm font-semibold rounded-xl transition duration-150 {% if request.endpoint == 'transactions_page' %}bg-white/80 dark:bg-white/10 text-indigo-600 dark:text-indigo-300 border border-slate-200/80 dark:border-white/15 shadow-sm backdrop-blur-md font-bold{% else %}text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 hover:text-slate-900 dark:hover:text-slate-100{% endif %}">
+                    <a href="{{ url_for('transactions_page') }}" class="flex items-center px-4 py-3 text-sm font-semibold rounded-xl transition duration-150 {% if request.endpoint == 'transactions_page' %}bg-white dark:bg-slate-800 text-slate-900 dark:text-white shadow-premium dark:shadow-none font-bold{% else %}text-slate-600 dark:text-slate-400 hover:bg-white/60 dark:hover:bg-slate-800/60 hover:text-slate-900 dark:hover:text-slate-100{% endif %}">
                         <span class="mr-3 text-base">💳</span> Transactions
                     </a>
-                    <a href="{{ url_for('members_page') }}" class="flex items-center px-4 py-3 text-sm font-semibold rounded-xl transition duration-150 {% if request.endpoint == 'members_page' %}bg-white/80 dark:bg-white/10 text-indigo-600 dark:text-indigo-300 border border-slate-200/80 dark:border-white/15 shadow-sm backdrop-blur-md font-bold{% else %}text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 hover:text-slate-900 dark:hover:text-slate-100{% endif %}">
+                    <a href="{{ url_for('members_page') }}" class="flex items-center px-4 py-3 text-sm font-semibold rounded-xl transition duration-150 {% if request.endpoint == 'members_page' %}bg-white dark:bg-slate-800 text-slate-900 dark:text-white shadow-premium dark:shadow-none font-bold{% else %}text-slate-600 dark:text-slate-400 hover:bg-white/60 dark:hover:bg-slate-800/60 hover:text-slate-900 dark:hover:text-slate-100{% endif %}">
                         <span class="mr-3 text-base">👥</span> Member List
                     </a>
-                    <a href="{{ url_for('history_page') }}" class="flex items-center px-4 py-3 text-sm font-semibold rounded-xl transition duration-150 {% if request.endpoint == 'history_page' %}bg-white/80 dark:bg-white/10 text-indigo-600 dark:text-indigo-300 border border-slate-200/80 dark:border-white/15 shadow-sm backdrop-blur-md font-bold{% else %}text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 hover:text-slate-900 dark:hover:text-slate-100{% endif %}">
+                    <a href="{{ url_for('history_page') }}" class="flex items-center px-4 py-3 text-sm font-semibold rounded-xl transition duration-150 {% if request.endpoint == 'history_page' %}bg-white dark:bg-slate-800 text-slate-900 dark:text-white shadow-premium dark:shadow-none font-bold{% else %}text-slate-600 dark:text-slate-400 hover:bg-white/60 dark:hover:bg-slate-800/60 hover:text-slate-900 dark:hover:text-slate-100{% endif %}">
                         <span class="mr-3 text-base">🕰️</span> History
                     </a>
-                    <a href="{{ url_for('chat_page') }}" class="flex items-center justify-between px-4 py-3 text-sm font-semibold rounded-xl transition duration-150 {% if request.endpoint == 'chat_page' %}bg-white/80 dark:bg-white/10 text-indigo-600 dark:text-indigo-300 border border-slate-200/80 dark:border-white/15 shadow-sm backdrop-blur-md font-bold{% else %}text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 hover:text-slate-900 dark:hover:text-slate-100{% endif %}">
+                    <a href="{{ url_for('chat_page') }}" class="flex items-center justify-between px-4 py-3 text-sm font-semibold rounded-xl transition duration-150 {% if request.endpoint == 'chat_page' %}bg-white dark:bg-slate-800 text-slate-900 dark:text-white shadow-premium dark:shadow-none font-bold{% else %}text-slate-600 dark:text-slate-400 hover:bg-white/60 dark:hover:bg-slate-800/60 hover:text-slate-900 dark:hover:text-slate-100{% endif %}">
                         <div class="flex items-center">
                             <span class="text-base"><svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5 mr-3 inline-block" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z" /></svg></span> Chat
                         </div>
@@ -279,7 +304,7 @@
     </div>
 
     <!-- ================== DESKTOP PERSISTENT SIDEBAR ================== -->
-    <aside id="desktopSidebar" class="hidden lg:flex lg:flex-col lg:w-64 lg:fixed lg:inset-y-0 lg:z-40 bg-white/40 text-slate-800 dark:bg-slate-950/40 backdrop-blur-2xl border-r border-slate-200/50 dark:border-slate-800/50 rounded-r-[1.5rem] overflow-hidden">
+    <aside id="desktopSidebar" class="hidden lg:flex lg:flex-col lg:w-64 lg:fixed lg:inset-y-0 lg:z-40 bg-white/70 backdrop-blur-xl border-r border-slate-200/60 shadow-[4px_0_24px_rgba(112,128,175,0.08)] text-slate-800 dark:bg-slate-900/80 dark:border-slate-800/60 dark:text-slate-100 dark:shadow-[4px_0_24px_rgba(0,0,0,0.3)] rounded-none overflow-hidden transition-all duration-300">
         <div class="flex flex-col flex-1 h-full min-h-screen">
             <!-- Sidebar Header -->
             <div class="flex items-center justify-between h-16 px-6 border-b border-slate-200/50 dark:border-slate-800/50 bg-transparent">
@@ -294,29 +319,29 @@
             
             <!-- Navigation links -->
             <nav class="flex-1 px-4 py-4 space-y-1.5 overflow-y-auto">
-                    <a href="{{ url_for('dashboard') }}" class="flex items-center px-4 py-3 text-sm font-semibold rounded-xl transition duration-150 {% if request.endpoint == 'dashboard' %}bg-white/80 dark:bg-white/10 text-indigo-600 dark:text-indigo-300 border border-slate-200/80 dark:border-white/15 shadow-sm backdrop-blur-md font-bold{% else %}text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 hover:text-slate-900 dark:hover:text-slate-100{% endif %}">
+                    <a href="{{ url_for('dashboard') }}" class="flex items-center px-4 py-3 text-sm font-semibold rounded-xl transition duration-150 {% if request.endpoint == 'dashboard' %}bg-white dark:bg-slate-800 text-slate-900 dark:text-white shadow-premium dark:shadow-none font-bold{% else %}text-slate-600 dark:text-slate-400 hover:bg-white/60 dark:hover:bg-slate-800/60 hover:text-slate-900 dark:hover:text-slate-100{% endif %}">
                         <span class="mr-3 text-base">📊</span> Dashboard
                     </a>
                     {% if current_user.is_approved %}
-                    <a href="{{ url_for('meal_status') }}" class="flex items-center px-4 py-3 text-sm font-semibold rounded-xl transition duration-150 {% if request.endpoint == 'meal_status' %}bg-white/80 dark:bg-white/10 text-indigo-600 dark:text-indigo-300 border border-slate-200/80 dark:border-white/15 shadow-sm backdrop-blur-md font-bold{% else %}text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 hover:text-slate-900 dark:hover:text-slate-100{% endif %}">
+                    <a href="{{ url_for('meal_status') }}" class="flex items-center px-4 py-3 text-sm font-semibold rounded-xl transition duration-150 {% if request.endpoint == 'meal_status' %}bg-white dark:bg-slate-800 text-slate-900 dark:text-white shadow-premium dark:shadow-none font-bold{% else %}text-slate-600 dark:text-slate-400 hover:bg-white/60 dark:hover:bg-slate-800/60 hover:text-slate-900 dark:hover:text-slate-100{% endif %}">
                         <span class="mr-3 text-base">🍽️</span> Meal Status
                     </a>
-                    <a href="{{ url_for('todays_meals') }}" class="flex items-center px-4 py-3 text-sm font-semibold rounded-xl transition duration-150 {% if request.endpoint == 'todays_meals' %}bg-white/80 dark:bg-white/10 text-indigo-600 dark:text-indigo-300 border border-slate-200/80 dark:border-white/15 shadow-sm backdrop-blur-md font-bold{% else %}text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 hover:text-slate-900 dark:hover:text-slate-100{% endif %}">
+                    <a href="{{ url_for('todays_meals') }}" class="flex items-center px-4 py-3 text-sm font-semibold rounded-xl transition duration-150 {% if request.endpoint == 'todays_meals' %}bg-white dark:bg-slate-800 text-slate-900 dark:text-white shadow-premium dark:shadow-none font-bold{% else %}text-slate-600 dark:text-slate-400 hover:bg-white/60 dark:hover:bg-slate-800/60 hover:text-slate-900 dark:hover:text-slate-100{% endif %}">
                         <span class="mr-3 text-base">📋</span> Today's Meals
                     </a>
-                    <a href="{{ url_for('menu') }}" class="flex items-center px-4 py-3 text-sm font-semibold rounded-xl transition duration-150 {% if request.endpoint == 'menu' %}bg-white/80 dark:bg-white/10 text-indigo-600 dark:text-indigo-300 border border-slate-200/80 dark:border-white/15 shadow-sm backdrop-blur-md font-bold{% else %}text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 hover:text-slate-900 dark:hover:text-slate-100{% endif %}">
+                    <a href="{{ url_for('menu') }}" class="flex items-center px-4 py-3 text-sm font-semibold rounded-xl transition duration-150 {% if request.endpoint == 'menu' %}bg-white dark:bg-slate-800 text-slate-900 dark:text-white shadow-premium dark:shadow-none font-bold{% else %}text-slate-600 dark:text-slate-400 hover:bg-white/60 dark:hover:bg-slate-800/60 hover:text-slate-900 dark:hover:text-slate-100{% endif %}">
                         <span class="mr-3 text-base">🍲</span> Today's Menu
                     </a>
-                    <a href="{{ url_for('transactions_page') }}" class="flex items-center px-4 py-3 text-sm font-semibold rounded-xl transition duration-150 {% if request.endpoint == 'transactions_page' %}bg-white/80 dark:bg-white/10 text-indigo-600 dark:text-indigo-300 border border-slate-200/80 dark:border-white/15 shadow-sm backdrop-blur-md font-bold{% else %}text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 hover:text-slate-900 dark:hover:text-slate-100{% endif %}">
+                    <a href="{{ url_for('transactions_page') }}" class="flex items-center px-4 py-3 text-sm font-semibold rounded-xl transition duration-150 {% if request.endpoint == 'transactions_page' %}bg-white dark:bg-slate-800 text-slate-900 dark:text-white shadow-premium dark:shadow-none font-bold{% else %}text-slate-600 dark:text-slate-400 hover:bg-white/60 dark:hover:bg-slate-800/60 hover:text-slate-900 dark:hover:text-slate-100{% endif %}">
                         <span class="mr-3 text-base">💳</span> Transactions
                     </a>
-                    <a href="{{ url_for('members_page') }}" class="flex items-center px-4 py-3 text-sm font-semibold rounded-xl transition duration-150 {% if request.endpoint == 'members_page' %}bg-white/80 dark:bg-white/10 text-indigo-600 dark:text-indigo-300 border border-slate-200/80 dark:border-white/15 shadow-sm backdrop-blur-md font-bold{% else %}text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 hover:text-slate-900 dark:hover:text-slate-100{% endif %}">
+                    <a href="{{ url_for('members_page') }}" class="flex items-center px-4 py-3 text-sm font-semibold rounded-xl transition duration-150 {% if request.endpoint == 'members_page' %}bg-white dark:bg-slate-800 text-slate-900 dark:text-white shadow-premium dark:shadow-none font-bold{% else %}text-slate-600 dark:text-slate-400 hover:bg-white/60 dark:hover:bg-slate-800/60 hover:text-slate-900 dark:hover:text-slate-100{% endif %}">
                         <span class="mr-3 text-base">👥</span> Member List
                     </a>
-                    <a href="{{ url_for('history_page') }}" class="flex items-center px-4 py-3 text-sm font-semibold rounded-xl transition duration-150 {% if request.endpoint == 'history_page' %}bg-white/80 dark:bg-white/10 text-indigo-600 dark:text-indigo-300 border border-slate-200/80 dark:border-white/15 shadow-sm backdrop-blur-md font-bold{% else %}text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 hover:text-slate-900 dark:hover:text-slate-100{% endif %}">
+                    <a href="{{ url_for('history_page') }}" class="flex items-center px-4 py-3 text-sm font-semibold rounded-xl transition duration-150 {% if request.endpoint == 'history_page' %}bg-white dark:bg-slate-800 text-slate-900 dark:text-white shadow-premium dark:shadow-none font-bold{% else %}text-slate-600 dark:text-slate-400 hover:bg-white/60 dark:hover:bg-slate-800/60 hover:text-slate-900 dark:hover:text-slate-100{% endif %}">
                         <span class="mr-3 text-base">🕰️</span> History
                     </a>
-                    <a href="{{ url_for('chat_page') }}" class="flex items-center justify-between px-4 py-3 text-sm font-semibold rounded-xl transition duration-150 {% if request.endpoint == 'chat_page' %}bg-white/80 dark:bg-white/10 text-indigo-600 dark:text-indigo-300 border border-slate-200/80 dark:border-white/15 shadow-sm backdrop-blur-md font-bold{% else %}text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 hover:text-slate-900 dark:hover:text-slate-100{% endif %}">
+                    <a href="{{ url_for('chat_page') }}" class="flex items-center justify-between px-4 py-3 text-sm font-semibold rounded-xl transition duration-150 {% if request.endpoint == 'chat_page' %}bg-white dark:bg-slate-800 text-slate-900 dark:text-white shadow-premium dark:shadow-none font-bold{% else %}text-slate-600 dark:text-slate-400 hover:bg-white/60 dark:hover:bg-slate-800/60 hover:text-slate-900 dark:hover:text-slate-100{% endif %}">
                         <div class="flex items-center">
                             <span class="text-base"><svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5 mr-3 inline-block" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z" /></svg></span> Chat
                         </div>
@@ -361,7 +386,7 @@
         <!-- Header / Top Bar (Desktop and Mobile) -->
         {% if current_user %}
         <!-- Header -->
-        <header class="sticky top-0 z-30 flex items-center justify-between h-16 px-4 sm:px-6 lg:px-8 glass-nav border-b border-slate-200/80 dark:border-slate-800/80 shadow-sm transition-colors duration-300">
+        <header class="sticky top-0 z-30 flex items-center justify-between h-16 px-4 sm:px-6 lg:px-8 glass-nav border-b border-slate-200/50 dark:border-slate-800/50 transition-colors duration-300">
             <!-- Left Side: Mobile Menu Button & Title -->
             <div class="flex items-center space-x-3">
                 <button onclick="toggleSidebar()" class="p-2 rounded-lg border border-slate-200 dark:border-slate-800 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-600 dark:text-slate-300 transition duration-150">
@@ -511,13 +536,49 @@
     <script>
         // Toggle Theme
         function toggleTheme() {
-            if (document.documentElement.classList.contains('dark')) {
-                document.documentElement.classList.remove('dark');
-                localStorage.setItem('theme', 'light');
-            } else {
-                document.documentElement.classList.add('dark');
-                localStorage.setItem('theme', 'dark');
+            const isDark = document.documentElement.classList.contains('dark');
+            const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+            
+            // Fallback for browsers without View Transition API or if reduced motion is preferred
+            if (!document.startViewTransition || prefersReducedMotion) {
+                if (isDark) {
+                    document.documentElement.classList.remove('dark');
+                    localStorage.setItem('theme', 'light');
+                } else {
+                    document.documentElement.classList.add('dark');
+                    localStorage.setItem('theme', 'dark');
+                }
+                return;
             }
+
+            // Start the view transition
+            const transition = document.startViewTransition(() => {
+                if (isDark) {
+                    document.documentElement.classList.remove('dark');
+                    localStorage.setItem('theme', 'light');
+                } else {
+                    document.documentElement.classList.add('dark');
+                    localStorage.setItem('theme', 'dark');
+                }
+            });
+
+            // Animate the clip-path once transition is ready
+            transition.ready.then(() => {
+                const endRadius = Math.hypot(innerWidth, innerHeight);
+                document.documentElement.animate(
+                    {
+                        clipPath: [
+                            'circle(0px at 50% 50%)',
+                            `circle(${endRadius}px at 50% 50%)`
+                        ]
+                    },
+                    {
+                        duration: 1100,
+                        easing: 'ease-out',
+                        pseudoElement: '::view-transition-new(root)',
+                    }
+                );
+            });
         }
 
         // Toggle Mobile Sidebar
