@@ -100,6 +100,10 @@ test_hostel_management/
 Run the automated setup script to create a virtual environment, install dependencies, and seed demo data:
 
 ```bash
+# 1. Navigate to the project directory
+cd test_hostel_management
+
+# 2. Run setup script
 # Windows
 python setup.py
 
@@ -109,7 +113,10 @@ python3 setup.py
 
 ### Manual Setup
 ```bash
-# 1. Create and activate virtual environment
+# 1. Navigate to the project directory
+cd test_hostel_management
+
+# 2. Create and activate virtual environment
 python -m venv venv
 # Windows:
 venv\Scripts\activate

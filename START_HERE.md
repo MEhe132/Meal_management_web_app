@@ -15,9 +15,9 @@ A **production-ready** Hostel Meal Management System with:
 
 ## 🎯 Quick Start (5 minutes)
 
-### Step 1: Open Terminal
+### Step 1: Navigate to Project Directory
 ```bash
-cd "d:\1_Programming languages\04_python\02_python_flask\08_college_project_{Mehedi & Arefin }\hostel_meal_system"
+cd test_hostel_management
 ```
 
 ### Step 2: Create Virtual Environment

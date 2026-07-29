@@ -19,7 +19,12 @@ python3 setup.py
 
 ### Manual Setup
 
-#### Step 1: Create Virtual Environment
+#### Step 1: Navigate to Project Directory
+```bash
+cd test_hostel_management
+```
+
+#### Step 2: Create Virtual Environment
 ```bash
 # Windows
 python -m venv venv
@@ -30,17 +35,17 @@ python3 -m venv venv
 source venv/bin/activate
 ```
 
-#### Step 2: Install Dependencies
+#### Step 3: Install Dependencies
 ```bash
 pip install -r requirements.txt
 ```
 
-#### Step 3: Initialize Demo Data
+#### Step 4: Initialize Demo Data
 ```bash
 python init_demo.py
 ```
 
-#### Step 4: Run Application
+#### Step 5: Run Application
 ```bash
 python app.py
 ```
