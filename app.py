@@ -624,8 +624,23 @@ def create_app(config_name='development'):
     def transactions_page():
         """Transactions Page - Shows expenses and user deposits/withdrawals for transparent auditing"""
         current_user = User.query.get(session['user_id'])
-        all_transactions = Transaction.query.order_by(Transaction.date.desc()).all()
-        all_expenses = Expense.query.order_by(Expense.date.desc()).all()
+        
+        month_param = request.args.get('month', type=int)
+        year_param = request.args.get('year', type=int)
+        
+        transaction_query = Transaction.query
+        expense_query = Expense.query
+        
+        if year_param:
+            transaction_query = transaction_query.filter(db.extract('year', Transaction.date) == year_param)
+            expense_query = expense_query.filter(db.extract('year', Expense.date) == year_param)
+            
+        if month_param:
+            transaction_query = transaction_query.filter(db.extract('month', Transaction.date) == month_param)
+            expense_query = expense_query.filter(db.extract('month', Expense.date) == month_param)
+            
+        all_transactions = transaction_query.order_by(Transaction.date.desc()).all()
+        all_expenses = expense_query.order_by(Expense.date.desc()).all()
         all_users = User.query.filter_by(is_active=True).all()
         
         return render_template(
@@ -633,7 +648,9 @@ def create_app(config_name='development'):
             current_user=current_user,
             transactions=all_transactions,
             expenses=all_expenses,
-            all_users=all_users
+            all_users=all_users,
+            selected_month=month_param,
+            selected_year=year_param
         )
 
     @app.route('/members')
@@ -839,15 +856,27 @@ def create_app(config_name='development'):
         amount = request.json.get('amount', 0)
         transaction_type = request.json.get('type', 'deposit')  # deposit or withdrawal
         description = request.json.get('description', '')
+        date_str = request.json.get('date')
         
         if not user_id or amount <= 0:
             return {'success': False, 'message': 'Invalid input'}, 400
+            
+        trans_date = datetime.now()
+        if date_str:
+            try:
+                # Append current time to the date so we have a full datetime
+                parsed_date = datetime.strptime(date_str, '%Y-%m-%d')
+                current_time = datetime.now().time()
+                trans_date = datetime.combine(parsed_date.date(), current_time)
+            except ValueError:
+                pass
         
         transaction = Transaction(
             user_id=user_id,
             amount=float(amount),
             type=transaction_type,
-            description=description
+            description=description,
+            date=trans_date
         )
         
         db.session.add(transaction)
@@ -1120,6 +1149,32 @@ def create_app(config_name='development'):
         db.session.commit()
         return {'success': True, 'message': f'Member deleted.'}
     
+    @app.route('/api/remove-member/<int:user_id>', methods=['DELETE'])
+    @manager_required
+    def remove_member(user_id):
+        """API endpoint to soft-delete an approved member and withdraw balance"""
+        user = User.query.get(user_id)
+        if not user:
+            return {'success': False, 'message': 'User not found'}, 404
+        
+        if user.is_manager():
+            return {'success': False, 'message': 'Cannot delete manager.'}, 400
+            
+        # Withdraw any remaining balance
+        balance = user.get_balance()
+        if balance > 0:
+            withdrawal = Transaction(
+                user_id=user.id,
+                amount=balance,
+                type='withdrawal',
+                description='Auto-withdrawal upon member deletion'
+            )
+            db.session.add(withdrawal)
+            
+        user.is_active = False
+        db.session.commit()
+        return {'success': True, 'message': f'{user.name} has been removed. Any remaining balance was auto-withdrawn.'}
+
     return app
 
 if __name__ == '__main__':

@@ -26,14 +26,51 @@
         {% endif %}
     </div>
 
-    <!-- Toggle Tabs -->
-    <div class="flex space-x-2 text-sm font-bold mb-4">
-        <button id="tabExpensesBtn" onclick="switchTab('expenses')" class="px-4 py-2.5 bg-indigo-50/80 dark:bg-indigo-900/30 text-indigo-650 dark:text-indigo-400 rounded-xl transition-colors">
-            Hostel Purchase &amp; Expense History 🛒
-        </button>
-        <button id="tabTransactionsBtn" onclick="switchTab('transactions')" class="px-4 py-2.5 text-slate-550 dark:text-slate-450 hover:bg-slate-50 dark:hover:bg-slate-800/50 rounded-xl transition-colors">
-            Member Deposits/Withdrawals 💳
-        </button>
+    <!-- Controls (Tabs & Filter) -->
+    <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-4">
+        <div class="flex space-x-2 text-sm font-bold overflow-x-auto pb-1">
+            <button id="tabExpensesBtn" onclick="switchTab('expenses')" class="px-4 py-2.5 bg-indigo-50/80 dark:bg-indigo-900/30 text-indigo-650 dark:text-indigo-400 rounded-xl transition-colors whitespace-nowrap">
+                Hostel Purchase &amp; Expense History 🛒
+            </button>
+            <button id="tabTransactionsBtn" onclick="switchTab('transactions')" class="px-4 py-2.5 text-slate-550 dark:text-slate-450 hover:bg-slate-50 dark:hover:bg-slate-800/50 rounded-xl transition-colors whitespace-nowrap">
+                Member Deposits/Withdrawals 💳
+            </button>
+        </div>
+        
+        <form method="GET" action="{{ url_for('transactions_page') }}" class="flex flex-wrap items-center gap-2">
+            <input type="hidden" name="tab" id="filterTabParam" value="{{ request.args.get('tab', 'expenses') }}">
+            <select name="month" class="px-3 py-2 border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 rounded-lg text-sm font-medium text-slate-700 dark:text-slate-300 focus:outline-none focus:border-indigo-500 shadow-sm">
+                <option value="">All Months</option>
+                <option value="1" {% if selected_month == 1 %}selected{% endif %}>January</option>
+                <option value="2" {% if selected_month == 2 %}selected{% endif %}>February</option>
+                <option value="3" {% if selected_month == 3 %}selected{% endif %}>March</option>
+                <option value="4" {% if selected_month == 4 %}selected{% endif %}>April</option>
+                <option value="5" {% if selected_month == 5 %}selected{% endif %}>May</option>
+                <option value="6" {% if selected_month == 6 %}selected{% endif %}>June</option>
+                <option value="7" {% if selected_month == 7 %}selected{% endif %}>July</option>
+                <option value="8" {% if selected_month == 8 %}selected{% endif %}>August</option>
+                <option value="9" {% if selected_month == 9 %}selected{% endif %}>September</option>
+                <option value="10" {% if selected_month == 10 %}selected{% endif %}>October</option>
+                <option value="11" {% if selected_month == 11 %}selected{% endif %}>November</option>
+                <option value="12" {% if selected_month == 12 %}selected{% endif %}>December</option>
+            </select>
+            
+            <select name="year" class="px-3 py-2 border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 rounded-lg text-sm font-medium text-slate-700 dark:text-slate-300 focus:outline-none focus:border-indigo-500 shadow-sm">
+                <option value="">All Years</option>
+                {% for y in range(2024, 2031) %}
+                <option value="{{ y }}" {% if selected_year == y %}selected{% endif %}>{{ y }}</option>
+                {% endfor %}
+            </select>
+            
+            <button type="submit" class="px-4 py-2 bg-slate-800 dark:bg-slate-700 text-white rounded-lg text-sm font-semibold hover:bg-slate-700 dark:hover:bg-slate-600 transition shadow-sm">
+                Filter
+            </button>
+            {% if selected_month or selected_year %}
+            <a href="{{ url_for('transactions_page') }}" class="px-4 py-2 bg-red-50 text-red-600 dark:bg-red-900/20 dark:text-red-400 rounded-lg text-sm font-semibold hover:bg-red-100 dark:hover:bg-red-900/40 transition shadow-sm">
+                Clear
+            </a>
+            {% endif %}
+        </form>
     </div>
 
     <!-- TAB 1: HOSTEL EXPENSES -->
@@ -180,6 +217,11 @@
             </div>
 
             <div>
+                <label class="block text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-2">Transaction Date (Optional, defaults to today)</label>
+                <input type="date" id="moneyDate" class="w-full px-4 py-2.5 border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 rounded-xl focus:outline-none focus:ring-2 focus:ring-green-500 text-slate-950 dark:text-slate-100 transition">
+            </div>
+
+            <div>
                 <label class="block text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-2">Description / Notes</label>
                 <input type="text" id="moneyDescription" placeholder="e.g. Cash payment / refund" class="w-full px-4 py-2.5 border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 rounded-xl focus:outline-none focus:ring-2 focus:ring-green-500 text-slate-950 dark:text-slate-100 transition">
             </div>
@@ -205,7 +247,7 @@
         </div>
         
         <div class="space-y-4">
-            <div class="grid grid-cols-2 gap-4">
+            <div class="grid grid-cols-2 gap-4 items-end">
                 <div>
                     <label class="block text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-2">Amount (৳) (Can be negative)</label>
                     <input type="number" id="expenseAmount" placeholder="e.g. 1500 or -500" class="w-full px-4 py-2.5 border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 text-slate-950 dark:text-slate-100 transition">
@@ -256,18 +298,24 @@
         const activeClass = 'px-4 py-2.5 bg-indigo-50/80 dark:bg-indigo-900/30 text-indigo-650 dark:text-indigo-400 rounded-xl transition-colors';
         const inactiveClass = 'px-4 py-2.5 text-slate-550 dark:text-slate-450 hover:bg-slate-50 dark:hover:bg-slate-800/50 rounded-xl transition-colors';
 
+        const urlParams = new URLSearchParams(window.location.search);
+        
         if (tab === 'expenses') {
             expensesBtn.className = activeClass;
             transactionsBtn.className = inactiveClass;
             expensesTab.classList.remove('hidden');
             transactionsTab.classList.add('hidden');
-            window.history.replaceState(null, null, '?tab=expenses');
+            document.getElementById('filterTabParam').value = 'expenses';
+            urlParams.set('tab', 'expenses');
+            window.history.replaceState(null, null, '?' + urlParams.toString());
         } else {
             transactionsBtn.className = activeClass;
             expensesBtn.className = inactiveClass;
             transactionsTab.classList.remove('hidden');
             expensesTab.classList.add('hidden');
-            window.history.replaceState(null, null, '?tab=transactions');
+            document.getElementById('filterTabParam').value = 'transactions';
+            urlParams.set('tab', 'transactions');
+            window.history.replaceState(null, null, '?' + urlParams.toString());
         }
     }
 
@@ -305,6 +353,7 @@
         const userId = document.getElementById('moneyUserId').value;
         const amount = document.getElementById('moneyAmount').value;
         const type = document.getElementById('moneyType').value;
+        const date = document.getElementById('moneyDate').value;
         const desc = document.getElementById('moneyDescription').value.trim();
 
         if (!userId || !amount || amount <= 0) {
@@ -319,6 +368,7 @@
                 user_id: parseInt(userId),
                 amount: parseFloat(amount),
                 type: type,
+                date: date,
                 description: desc
             })
         })
