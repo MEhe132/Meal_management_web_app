@@ -1,13 +1,13 @@
-"""
+
 DATABASE SCHEMA & DOCUMENTATION
 Hostel Meal Management System
-"""
+
 
 # ============================================================================
 # DATABASE OVERVIEW
 # ============================================================================
 
-"""
+
 Database Type: SQLite
 Database File: hostel_meals.db (created automatically on first run)
 Location: hostel_meal_system/hostel_meals.db
@@ -17,13 +17,13 @@ The database stores all data for the meal management system including:
 - Daily meal entries
 - Financial transactions
 - Historical meal rates
-"""
+
 
 # ============================================================================
 # TABLES
 # ============================================================================
 
-"""
+
 TABLE: users
 =============
 
@@ -77,9 +77,9 @@ Sample Data:
 Relationships:
   - One-to-Many with meals (user has many meals)
   - One-to-Many with transactions (user has many transactions)
-"""
 
-"""
+
+
 TABLE: meals
 =============
 
@@ -136,9 +136,9 @@ Business Logic:
   - User can have multiple meal entries on different dates
   - Only one entry per user per date (enforced by UNIQUE constraint)
   - Manager can update meal counts anytime
-"""
 
-"""
+
+
 TABLE: transactions
 ====================
 
@@ -196,9 +196,9 @@ Business Logic:
   - Type determines if amount is added or subtracted
   - Historical record of all financial activity
   - No transaction can be deleted (audit trail)
-"""
 
-"""
+
+
 TABLE: meal_rates
 ===================
 
@@ -244,13 +244,13 @@ Business Logic:
   - Manager can set new rate anytime
   - Multiple rates on different dates allowed
   - Only one rate per date (latest is used)
-"""
+
 
 # ============================================================================
 # RELATIONSHIPS & DEPENDENCIES
 # ============================================================================
 
-"""
+
 Entity Relationship Diagram (Text):
 
 ┌─────────────┐
@@ -290,13 +290,13 @@ Entity Relationship Diagram (Text):
 └──────────────────┘
 
 (meal_rates is referenced indirectly for calculations)
-"""
+
 
 # ============================================================================
 # DATA CALCULATIONS & DERIVED VALUES
 # ============================================================================
 
-"""
+
 These values are calculated from base data:
 
 1. User's Total Meals
@@ -363,13 +363,13 @@ These values are calculated from base data:
         WHERE type = 'deposit'
    
    Used for: Financial overview
-"""
+
 
 # ============================================================================
 # DATABASE OPERATIONS
 # ============================================================================
 
-"""
+
 Common Database Operations:
 
 1. GET CURRENT USER INFO
@@ -409,13 +409,13 @@ Common Database Operations:
         ORDER BY date DESC
    Python: Transaction.query.filter_by(user_id=uid).order_by(
            Transaction.date.desc()).all()
-"""
+
 
 # ============================================================================
 # INTEGRITY CONSTRAINTS
 # ============================================================================
 
-"""
+
 Data Integrity Rules Enforced:
 
 1. Email Uniqueness
@@ -446,13 +446,13 @@ Data Integrity Rules Enforced:
    - All amounts must be > 0
    - Enforced in application logic
    - Type field determines + or -
-"""
+
 
 # ============================================================================
 # PERFORMANCE CONSIDERATIONS
 # ============================================================================
 
-"""
+
 Query Optimization:
 
 1. Indexes on Frequently Queried Columns
@@ -475,13 +475,13 @@ Query Optimization:
    - Not suitable for thousands of users
    - Single-file database
    - Good for: College/hostel project (100s of users)
-"""
+
 
 # ============================================================================
 # BACKUP & MAINTENANCE
 # ============================================================================
 
-"""
+
 Database Maintenance:
 
 1. Backup Procedure
@@ -528,13 +528,13 @@ Database Maintenance:
    - Monitor database file size
    - Regular backups
    - Check transaction logs
-"""
+
 
 # ============================================================================
 # EXAMPLE QUERIES
 # ============================================================================
 
-"""
+
 Examples using SQLAlchemy:
 
 1. Get user by email:
@@ -572,4 +572,4 @@ Examples using SQLAlchemy:
    member = User.query.filter_by(role='member').order_by(
        User.get_balance().desc()
    ).first()
-"""
+

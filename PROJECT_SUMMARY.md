@@ -96,6 +96,7 @@ test_hostel_management/
 │   ├── history.html       # Monthly archives
 │   ├── chat.html          # Real-time hostel chat room
 │   ├── login.html         # Login view
-│   └── register.html      # User registration view
+│   ├── register.html      # User registration view
+│   └── manager.html       # Manager control panel
 └── necessaries/           # Developer reference guides & cheatsheets
 ```

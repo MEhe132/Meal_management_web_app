@@ -1,5 +1,10 @@
 # 🍽️ Plate & Spoon - Hostel Meal Management System
 
+![Flask](https://img.shields.io/badge/flask-%23000.svg?style=for-the-badge&logo=flask&logoColor=white)
+![SQLite](https://img.shields.io/badge/sqlite-%2307405e.svg?style=for-the-badge&logo=sqlite&logoColor=white)
+![TailwindCSS](https://img.shields.io/badge/tailwindcss-%2338B2AC.svg?style=for-the-badge&logo=tailwind-css&logoColor=white)
+![JavaScript](https://img.shields.io/badge/javascript-%23323330.svg?style=for-the-badge&logo=javascript&logoColor=%23F7DF1E)
+
 A modern, high-performance, real-time web application for managing hostel meals, financial accounting, daily menus, member accounts, and real-time chat. Built with Flask, SQLAlchemy, Tailwind CSS, and Server-Sent Events (SSE).
 
 ---
@@ -88,7 +93,8 @@ test_hostel_management/
 │   ├── history.html       # Archived past monthly sheets
 │   ├── chat.html          # Real-time hostel chat room
 │   ├── login.html         # Login page
-│   └── register.html      # Account registration page
+│   ├── register.html      # Account registration page
+│   └── manager.html       # Manager control panel
 └── necessaries/           # Developer cheatsheets & UI documentation
 ```
 

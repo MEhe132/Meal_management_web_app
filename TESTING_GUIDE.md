@@ -1,13 +1,13 @@
-"""
+
 TESTING GUIDE & QA CHECKLIST
 Hostel Meal Management System
-"""
+
 
 # ============================================================================
 # TESTING OVERVIEW
 # ============================================================================
 
-"""
+
 Testing Strategy:
 
 1. Manual Testing (Recommended for college project)
@@ -33,13 +33,13 @@ Testing Strategy:
    - Role-based access control
 
 This guide focuses on manual testing (practical for college project).
-"""
+
 
 # ============================================================================
 # TEST ENVIRONMENT SETUP
 # ============================================================================
 
-"""
+
 Before Testing:
 
 1. Fresh Database
@@ -69,13 +69,13 @@ Before Testing:
 4. Browser
    Use: Chrome, Firefox, Safari, or Edge
    Open: http://localhost:5900
-"""
+
 
 # ============================================================================
 # TEST CASE 1: AUTHENTICATION
 # ============================================================================
 
-"""
+
 TEST 1.1: Member Login
 ───────────────────────
 
@@ -240,13 +240,13 @@ Expected Results:
   ✓ Session expired
   ✓ Redirects to login
   ✓ Shows message: "Please log in first"
-"""
+
 
 # ============================================================================
 # TEST CASE 2: MEMBER DASHBOARD
 # ============================================================================
 
-"""
+
 TEST 2.1: Access Dashboard as Member
 ──────────────────────────────────────
 
@@ -333,13 +333,13 @@ Expected Results:
   ✓ Buttons functional
   ✓ Navigation works
   ✓ No layout breaks
-"""
+
 
 # ============================================================================
 # TEST CASE 3: MANAGER PANEL
 # ============================================================================
 
-"""
+
 TEST 3.1: Access Manager Panel
 ────────────────────────────────
 
@@ -458,13 +458,13 @@ Expected Results:
   ✓ All calculations update with new rate
   ✓ Historical meals use new rate
   ✓ Hostel total cost updated
-"""
+
 
 # ============================================================================
 # TEST CASE 4: CALCULATIONS & BUSINESS LOGIC
 # ============================================================================
 
-"""
+
 TEST 4.1: Basic Calculation
 ─────────────────────────────
 
@@ -570,13 +570,13 @@ Expected Results:
   ✓ Meal Rate: 50
   ✓ Total Cost: ~2200
   ✓ Footer row matches statistics
-"""
+
 
 # ============================================================================
 # TEST CASE 5: DATA INTEGRITY & EDGE CASES
 # ============================================================================
 
-"""
+
 TEST 5.1: One Meal Entry Per Day Per User
 ──────────────────────────────────────────
 
@@ -674,13 +674,13 @@ Expected Results:
   ✓ Special characters preserved
   ✓ No SQL injection
   ✓ Displays correctly
-"""
+
 
 # ============================================================================
 # TEST CASE 6: UI/UX & PRESENTATION
 # ============================================================================
 
-"""
+
 TEST 6.1: Color Coding
 ───────────────────────
 
@@ -760,13 +760,13 @@ Expected Results:
   ✓ Click outside closes modal
   ✓ Form fields functional
   ✓ Save/Cancel buttons work
-"""
+
 
 # ============================================================================
 # TEST CASE 7: SECURITY
 # ============================================================================
 
-"""
+
 TEST 7.1: SQL Injection Prevention
 ─────────────────────────────────
 
@@ -858,13 +858,13 @@ Production checklist:
   ✓ Update SECRET_KEY
   ✓ Disable DEBUG mode
   ✓ Use strong passwords
-"""
+
 
 # ============================================================================
 # PERFORMANCE TESTING
 # ============================================================================
 
-"""
+
 TEST 8.1: Dashboard Load Time
 ──────────────────────────────
 
@@ -913,13 +913,13 @@ Expected:
   ✓ All respond correctly
   ✓ No data corruption
   ✓ May see "database locked" at scale (SQLite limitation)
-"""
+
 
 # ============================================================================
 # REGRESSION TESTING
 # ============================================================================
 
-"""
+
 After any code changes, run these tests:
 
 1. Authentication Tests (1.1 - 1.10)
@@ -929,13 +929,13 @@ After any code changes, run these tests:
 5. Data Integrity Tests (5.1 - 5.6)
 
 Report any failures immediately.
-"""
+
 
 # ============================================================================
 # TEST REPORT TEMPLATE
 # ============================================================================
 
-"""
+
 PROJECT: Hostel Meal Management System
 DATE: [Date]
 TESTER: [Name]
@@ -974,4 +974,4 @@ Date: ____________________
 NOTES:
 ──────
 [Any additional notes or observations]
-"""
+

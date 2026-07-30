@@ -1,13 +1,13 @@
-"""
+
 API Documentation
 Hostel Meal Management System
-"""
+
 
 # ============================================================================
 # AUTHENTICATION ENDPOINTS
 # ============================================================================
 
-"""
+
 POST /login
 -----------
 Login a user
@@ -27,9 +27,9 @@ Example:
     "email": "user@example.com",
     "password": "password123"
   }
-"""
 
-"""
+
+
 POST /register
 --------------
 Register a new user
@@ -58,9 +58,9 @@ Example:
     "password_confirm": "password123",
     "role": "member"
   }
-"""
 
-"""
+
+
 GET /logout
 -----------
 Logout current user
@@ -72,13 +72,13 @@ Response:
 
 Example:
   GET /logout
-"""
+
 
 # ============================================================================
 # VIEW ENDPOINTS (Require Authentication)
 # ============================================================================
 
-"""
+
 GET /
 -----
 Home page
@@ -88,9 +88,9 @@ Response:
   - Redirects to /login if user is not logged in
 
 Permissions: None required
-"""
 
-"""
+
+
 GET /dashboard
 --------------
 View meal management dashboard
@@ -117,9 +117,9 @@ Data included:
 
 Example:
   GET /dashboard
-"""
 
-"""
+
+
 GET /manager
 ------------
 Manager control panel
@@ -141,13 +141,13 @@ Features:
 
 Example:
   GET /manager
-"""
+
 
 # ============================================================================
 # API ENDPOINTS (JSON, Manager Only)
 # ============================================================================
 
-"""
+
 POST /api/add-meal
 ------------------
 Add or update meal entry for a member on a specific date
@@ -193,9 +193,9 @@ Notes:
   - Creates new meal entry if doesn't exist
   - Updates existing entry if already present
   - Only one entry per user per date
-"""
 
-"""
+
+
 POST /api/add-money
 -------------------
 Add deposit or withdrawal transaction for a member
@@ -248,9 +248,9 @@ Notes:
   - Type determines whether money is added or removed
   - Description is for record-keeping
   - Returns updated balance after transaction
-"""
 
-"""
+
+
 POST /api/set-meal-rate
 -----------------------
 Set the meal rate for all members
@@ -296,13 +296,13 @@ Notes:
   - New rate applies to all calculations immediately
   - Rate must be positive number
   - If multiple rates set on same day, last one is used
-"""
+
 
 # ============================================================================
 # ERROR RESPONSES
 # ============================================================================
 
-"""
+
 Common Error Responses:
 
 401 Unauthorized (Not Authenticated)
@@ -338,13 +338,13 @@ Response:
   }
 
 When: Request data is malformed or invalid
-"""
+
 
 # ============================================================================
 # DATA MODELS
 # ============================================================================
 
-"""
+
 User Model
 ----------
 Attributes:
@@ -367,9 +367,9 @@ Methods:
 Relationships:
   - meals: Many Meal entries
   - transactions: Many Transaction entries
-"""
 
-"""
+
+
 Meal Model
 ----------
 Attributes:
@@ -385,9 +385,9 @@ Unique Constraint: (user_id, date)
 Notes:
   - One entry per user per day
   - Meal count can be decimal (e.g., 2.5)
-"""
 
-"""
+
+
 Transaction Model
 -----------------
 Attributes:
@@ -403,9 +403,9 @@ Notes:
   - Records all money transactions
   - Positive amount for both deposit and withdrawal
   - Type field determines operation
-"""
 
-"""
+
+
 MealRate Model
 --------------
 Attributes:
@@ -419,13 +419,13 @@ Notes:
   - Historical record of all rates
   - Latest rate by effective_date is used
   - Allows tracking rate changes over time
-"""
+
 
 # ============================================================================
 # HELPER FUNCTIONS
 # ============================================================================
 
-"""
+
 get_current_meal_rate()
 -----------------------
 Returns the current meal rate
@@ -435,9 +435,9 @@ Returns: Float (latest rate as of today)
 Usage:
   from models import get_current_meal_rate
   rate = get_current_meal_rate()
-"""
 
-"""
+
+
 get_hostel_stats(current_date=None)
 -----------------------------------
 Get statistics for entire hostel
@@ -457,13 +457,13 @@ Usage:
   from models import get_hostel_stats
   stats = get_hostel_stats()
   print(f"Total meals: {stats['total_meals']}")
-"""
+
 
 # ============================================================================
 # BUSINESS LOGIC
 # ============================================================================
 
-"""
+
 Calculations:
 
 1. Meal Rate
@@ -490,13 +490,13 @@ Calculations:
    - Meal Rate: Current rate
    - Total Cost: Total Meals × Meal Rate
    - Total Deposited: Sum of all deposits
-"""
+
 
 # ============================================================================
 # AUTHENTICATION & SECURITY
 # ============================================================================
 
-"""
+
 Session Management:
   - Session-based authentication
   - session['user_id'] stores authenticated user ID
@@ -523,13 +523,13 @@ Production Recommendations:
   - Enable CSRF tokens
   - Add rate limiting
   - Use PostgreSQL instead of SQLite
-"""
+
 
 # ============================================================================
 # USAGE EXAMPLES
 # ============================================================================
 
-"""
+
 Example 1: Login and View Dashboard
 -----------------------------------
 
@@ -545,9 +545,9 @@ Data: {
 # Step 3: GET dashboard
 GET /dashboard
 # Returns HTML dashboard page
-"""
 
-"""
+
+
 Example 2: Manager Adding Meals
 -------------------------------
 
@@ -574,9 +574,9 @@ Content-Type: application/json
   "rate": 50,
   "description": "Current rate"
 }
-"""
 
-"""
+
+
 Example 3: Manager Managing Finances
 -----------------------------------
 
@@ -599,4 +599,4 @@ Content-Type: application/json
   "type": "withdrawal",
   "description": "Service charge"
 }
-"""
+

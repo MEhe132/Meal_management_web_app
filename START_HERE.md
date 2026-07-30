@@ -88,10 +88,17 @@ hostel_meal_system/
 ├── requirements.txt          # Dependencies
 ├── templates/                # HTML templates
 │   ├── base.html
-│   ├── login.html
-│   ├── register.html
+│   ├── chat.html
 │   ├── dashboard.html
-│   └── manager.html
+│   ├── history.html
+│   ├── login.html
+│   ├── manager.html
+│   ├── meal_status.html
+│   ├── members.html
+│   ├── menu.html
+│   ├── register.html
+│   ├── todays_meals.html
+│   └── transactions.html
 ├── static/                   # CSS, JavaScript
 ├── hostel_meals.db          # Database (auto-created)
 └── DOCUMENTATION FILES:
