@@ -22,7 +22,8 @@ def init_demo_data():
             name='Manager User',
             email='manager@example.com',
             role='manager',
-            is_active=True
+            is_active=True,
+            is_approved=True
         )
         manager.set_password('password')
         db.session.add(manager)
@@ -42,7 +43,8 @@ def init_demo_data():
                 name=name,
                 email=email,
                 role='member',
-                is_active=True
+                is_active=True,
+                is_approved=True
             )
             member.set_password('password')
             db.session.add(member)

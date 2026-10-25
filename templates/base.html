@@ -245,7 +245,7 @@
                     <a href="{{ url_for('dashboard') }}" class="flex items-center px-4 py-3 text-sm font-semibold rounded-xl transition duration-150 {% if request.endpoint == 'dashboard' %}bg-white dark:bg-slate-800 text-slate-900 dark:text-white shadow-premium dark:shadow-none font-bold{% else %}text-slate-600 dark:text-slate-400 hover:bg-white/60 dark:hover:bg-slate-800/60 hover:text-slate-900 dark:hover:text-slate-100{% endif %}">
                         <span class="mr-3 text-base">📊</span> Dashboard
                     </a>
-                    {% if current_user.is_approved %}
+                    {% if current_user.is_approved or current_user.is_manager() %}
                     <a href="{{ url_for('meal_status') }}" class="flex items-center px-4 py-3 text-sm font-semibold rounded-xl transition duration-150 {% if request.endpoint == 'meal_status' %}bg-white dark:bg-slate-800 text-slate-900 dark:text-white shadow-premium dark:shadow-none font-bold{% else %}text-slate-600 dark:text-slate-400 hover:bg-white/60 dark:hover:bg-slate-800/60 hover:text-slate-900 dark:hover:text-slate-100{% endif %}">
                         <span class="mr-3 text-base">🍽️</span> Meal Status
                     </a>
@@ -322,7 +322,7 @@
                     <a href="{{ url_for('dashboard') }}" class="flex items-center px-4 py-3 text-sm font-semibold rounded-xl transition duration-150 {% if request.endpoint == 'dashboard' %}bg-white dark:bg-slate-800 text-slate-900 dark:text-white shadow-premium dark:shadow-none font-bold{% else %}text-slate-600 dark:text-slate-400 hover:bg-white/60 dark:hover:bg-slate-800/60 hover:text-slate-900 dark:hover:text-slate-100{% endif %}">
                         <span class="mr-3 text-base">📊</span> Dashboard
                     </a>
-                    {% if current_user.is_approved %}
+                    {% if current_user.is_approved or current_user.is_manager() %}
                     <a href="{{ url_for('meal_status') }}" class="flex items-center px-4 py-3 text-sm font-semibold rounded-xl transition duration-150 {% if request.endpoint == 'meal_status' %}bg-white dark:bg-slate-800 text-slate-900 dark:text-white shadow-premium dark:shadow-none font-bold{% else %}text-slate-600 dark:text-slate-400 hover:bg-white/60 dark:hover:bg-slate-800/60 hover:text-slate-900 dark:hover:text-slate-100{% endif %}">
                         <span class="mr-3 text-base">🍽️</span> Meal Status
                     </a>

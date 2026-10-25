@@ -57,14 +57,23 @@ def create_app(config_name='development'):
     # Initialize database
     db.init_app(app)
     
+    @app.before_request
+    def load_logged_in_user():
+        user_id = session.get('user_id')
+        if user_id is None:
+            g.current_user = None
+        else:
+            user = db.session.get(User, user_id)
+            if user is None:
+                session.clear()
+                g.current_user = None
+            else:
+                g.current_user = user
+
     # Register context processor with request-scoped caching
     @app.context_processor
     def inject_user():
-        current_user = getattr(g, 'current_user', None)
-        if current_user is None and 'user_id' in session:
-            current_user = User.query.get(session['user_id'])
-            g.current_user = current_user
-        return {'current_user': current_user}
+        return {'current_user': getattr(g, 'current_user', None)}
     
     # Create database tables & safe schema inspection migrations
     with app.app_context():
@@ -162,7 +171,8 @@ def create_app(config_name='development'):
     def login_required(f):
         @wraps(f)
         def decorated_function(*args, **kwargs):
-            if 'user_id' not in session:
+            if not getattr(g, 'current_user', None):
+                session.clear()
                 flash('Please log in first', 'warning')
                 return redirect(url_for('login'))
             return f(*args, **kwargs)
@@ -171,12 +181,13 @@ def create_app(config_name='development'):
     def manager_required(f):
         @wraps(f)
         def decorated_function(*args, **kwargs):
-            if 'user_id' not in session:
+            user = getattr(g, 'current_user', None)
+            if not user:
+                session.clear()
                 flash('Please log in first', 'warning')
                 return redirect(url_for('login'))
             
-            user = getattr(g, 'current_user', None) or User.query.get(session['user_id'])
-            if not user or not user.is_manager():
+            if not user.is_manager():
                 flash('You do not have permission to access this page', 'danger')
                 return redirect(url_for('dashboard'))
             return f(*args, **kwargs)
@@ -185,12 +196,13 @@ def create_app(config_name='development'):
     def approved_required(f):
         @wraps(f)
         def decorated_function(*args, **kwargs):
-            if 'user_id' not in session:
+            user = getattr(g, 'current_user', None)
+            if not user:
+                session.clear()
                 flash('Please log in first', 'warning')
                 return redirect(url_for('login'))
             
-            user = getattr(g, 'current_user', None) or User.query.get(session['user_id'])
-            if not user or not user.is_approved:
+            if not user.is_approved and not user.is_manager():
                 flash('Your account is pending manager approval', 'warning')
                 return redirect(url_for('dashboard'))
             return f(*args, **kwargs)
@@ -201,7 +213,7 @@ def create_app(config_name='development'):
     @app.route('/')
     def index():
         """Redirect to login or dashboard"""
-        if 'user_id' in session:
+        if getattr(g, 'current_user', None):
             return redirect(url_for('dashboard'))
         return redirect(url_for('login'))
     
@@ -279,7 +291,9 @@ def create_app(config_name='development'):
     @login_required
     def dashboard():
         """Dashboard - Main page for both members and managers"""
-        current_user = getattr(g, 'current_user', None) or User.query.get(session['user_id'])
+        current_user = getattr(g, 'current_user', None)
+        if not current_user:
+            return redirect(url_for('login'))
         
         all_users = User.query.filter_by(is_active=True).all()
         user_ids = [u.id for u in all_users]
@@ -374,12 +388,12 @@ def create_app(config_name='development'):
     @login_required
     def meal_status():
         """Meal Status - Members toggle their meals, Manager views all and locks slots"""
-        current_user = User.query.get(session['user_id'])
+        current_user = g.current_user
         
         # Manager can view and edit other members' status by passing user_id query param
         target_user_id = request.args.get('user_id', type=int)
         if target_user_id and current_user.is_manager():
-            target_user = User.query.get(target_user_id)
+            target_user = db.session.get(User, target_user_id)
         else:
             target_user = current_user
             target_user_id = current_user.id
@@ -421,7 +435,7 @@ def create_app(config_name='development'):
     @login_required
     def toggle_meal_status():
         """API endpoint to toggle a user's breakfast/lunch/dinner status"""
-        current_user = User.query.get(session['user_id'])
+        current_user = g.current_user
         data = request.json or {}
         
         target_user_id = data.get('user_id')
@@ -516,7 +530,7 @@ def create_app(config_name='development'):
     @login_required
     def todays_meals():
         """Today's Meal List - Displays breakfast, lunch, dinner statuses and totals for today"""
-        current_user = User.query.get(session['user_id'])
+        current_user = g.current_user
         today = date.today()
         
         all_users = User.query.filter_by(is_active=True).all()
@@ -567,7 +581,7 @@ def create_app(config_name='development'):
     @login_required
     def menu():
         """Today's and Weekly Menu Planner"""
-        current_user = User.query.get(session['user_id'])
+        current_user = g.current_user
         today = date.today()
         dates_range = [today + timedelta(days=i) for i in range(7)]
         
@@ -623,7 +637,7 @@ def create_app(config_name='development'):
     @login_required
     def transactions_page():
         """Transactions Page - Shows expenses and user deposits/withdrawals for transparent auditing"""
-        current_user = User.query.get(session['user_id'])
+        current_user = g.current_user
         
         month_param = request.args.get('month', type=int)
         year_param = request.args.get('year', type=int)
@@ -657,7 +671,7 @@ def create_app(config_name='development'):
     @login_required
     def members_page():
         """Members Page - Lists all members with unique auto-generated IDs"""
-        current_user = User.query.get(session['user_id'])
+        current_user = g.current_user
         all_users = User.query.filter_by(is_active=True).order_by(User.id.asc()).all()
         
         return render_template(
@@ -670,7 +684,7 @@ def create_app(config_name='development'):
     @login_required
     def history_page():
         """History - View past months sheets"""
-        current_user = User.query.get(session['user_id'])
+        current_user = g.current_user
         
         # Get distinct months from Meal dates
         meals = Meal.query.with_entities(Meal.date).all()
@@ -697,7 +711,7 @@ def create_app(config_name='development'):
     @login_required
     def chat_page():
         """Chat Page - Real-time messaging"""
-        current_user = User.query.get(session['user_id'])
+        current_user = g.current_user
         all_users = User.query.filter_by(is_active=True).all()
         all_users_json = [{'id': u.id, 'name': u.name} for u in all_users]
         return render_template('chat.html', current_user=current_user, all_users_json=all_users_json)
@@ -737,7 +751,7 @@ def create_app(config_name='development'):
     @login_required
     def chat_send():
         """Send a new chat message"""
-        current_user = User.query.get(session['user_id'])
+        current_user = g.current_user
         data = request.json or {}
         message_text = data.get('message', '').strip()
         reply_to_id = data.get('reply_to_id')
@@ -784,7 +798,7 @@ def create_app(config_name='development'):
     @app.route('/api/set-avatar-seed', methods=['POST'])
     @login_required
     def set_avatar_seed():
-        current_user = User.query.get(session['user_id'])
+        current_user = g.current_user
         data = request.json or {}
         seed = data.get('seed', '').strip()
         
@@ -882,8 +896,8 @@ def create_app(config_name='development'):
         db.session.add(transaction)
         db.session.commit()
         
-        user = User.query.get(user_id)
-        new_balance = user.get_balance()
+        user = db.session.get(User, user_id)
+        new_balance = user.get_balance() if user else 0.0
         
         return {
             'success': True,
@@ -895,7 +909,7 @@ def create_app(config_name='development'):
     @manager_required
     def delete_money(transaction_id):
         """API endpoint to delete a transaction (deposit/withdrawal)"""
-        transaction = Transaction.query.get(transaction_id)
+        transaction = db.session.get(Transaction, transaction_id)
         if not transaction:
             return {'success': False, 'message': 'Transaction not found'}, 404
         
@@ -903,8 +917,8 @@ def create_app(config_name='development'):
         db.session.delete(transaction)
         db.session.commit()
         
-        user = User.query.get(user_id)
-        new_balance = user.get_balance()
+        user = db.session.get(User, user_id)
+        new_balance = user.get_balance() if user else 0.0
         
         return {
             'success': True,
@@ -967,7 +981,7 @@ def create_app(config_name='development'):
             
         # Validate user_id if provided
         if user_id:
-            user_exists = User.query.get(user_id)
+            user_exists = db.session.get(User, user_id)
             if not user_exists:
                 return {'success': False, 'message': 'Selected member does not exist'}, 400
         else:
@@ -1030,7 +1044,7 @@ def create_app(config_name='development'):
     @manager_required
     def delete_expense(expense_id):
         """API endpoint to delete an expense"""
-        expense = Expense.query.get(expense_id)
+        expense = db.session.get(Expense, expense_id)
         
         if not expense:
             return {'success': False, 'message': 'Expense not found'}, 404
@@ -1066,7 +1080,7 @@ def create_app(config_name='development'):
             return {'success': False, 'message': 'Please select a member'}, 400
         
         # Get the new manager
-        new_manager = User.query.get(new_manager_id)
+        new_manager = db.session.get(User, new_manager_id)
         if not new_manager:
             return {'success': False, 'message': 'User not found'}, 404
         
@@ -1083,6 +1097,7 @@ def create_app(config_name='development'):
         
         # Promote new user to manager
         new_manager.role = 'manager'
+        new_manager.is_approved = True
         
         db.session.commit()
         
@@ -1126,7 +1141,7 @@ def create_app(config_name='development'):
     @manager_required
     def approve_member(user_id):
         """API endpoint to approve a pending member"""
-        user = User.query.get(user_id)
+        user = db.session.get(User, user_id)
         if not user:
             return {'success': False, 'message': 'User not found'}, 404
         
@@ -1138,7 +1153,7 @@ def create_app(config_name='development'):
     @manager_required
     def delete_member(user_id):
         """API endpoint to reject/delete a member"""
-        user = User.query.get(user_id)
+        user = db.session.get(User, user_id)
         if not user:
             return {'success': False, 'message': 'User not found'}, 404
         
@@ -1153,7 +1168,7 @@ def create_app(config_name='development'):
     @manager_required
     def remove_member(user_id):
         """API endpoint to soft-delete an approved member and withdraw balance"""
-        user = User.query.get(user_id)
+        user = db.session.get(User, user_id)
         if not user:
             return {'success': False, 'message': 'User not found'}, 404
         
