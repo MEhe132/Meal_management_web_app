@@ -166,6 +166,72 @@ def create_app(config_name='development'):
             default_rate = MealRate(rate=50, effective_date=date.today(), description="Initial meal rate")
             db.session.add(default_rate)
             db.session.commit()
+
+        # On Vercel serverless (/tmp SQLite), auto-seed demo accounts if database is empty
+        if os.environ.get('VERCEL') and User.query.first() is None:
+            try:
+                manager = User(
+                    name='Manager User',
+                    email='manager@example.com',
+                    role='manager',
+                    is_active=True,
+                    is_approved=True
+                )
+                manager.set_password('password')
+                db.session.add(manager)
+
+                member_data = [
+                    ('Mehedi Hasan', 'mehedi@example.com'),
+                    ('Arefin Ahmed', 'arefin@example.com'),
+                    ('Ali Hassan', 'ali@example.com'),
+                    ('Karim Khan', 'karim@example.com'),
+                ]
+                members = []
+                for m_name, m_email in member_data:
+                    member = User(
+                        name=m_name,
+                        email=m_email,
+                        role='member',
+                        is_active=True,
+                        is_approved=True
+                    )
+                    member.set_password('password')
+                    db.session.add(member)
+                    members.append(member)
+                db.session.commit()
+
+                all_demo_users = [manager] + members
+                for u in all_demo_users:
+                    db.session.add(Transaction(
+                        user_id=u.id,
+                        amount=5000,
+                        type='deposit',
+                        description='Monthly deposit'
+                    ))
+                for i in range(5):
+                    current_date = date.today() - timedelta(days=4 - i)
+                    for u in all_demo_users:
+                        meal = Meal(
+                            user_id=u.id,
+                            date=current_date,
+                            breakfast=(i % 2 == 0),
+                            lunch=True,
+                            dinner=True
+                        )
+                        meal.update_meal_count()
+                        db.session.add(meal)
+                for amount, desc in [
+                    (2000, "Rice - 50kg"),
+                    (1500, "Vegetables - Weekly supply"),
+                    (800, "Cooking oil"),
+                    (1200, "Chicken - 10kg"),
+                    (500, "Spices and condiments"),
+                ]:
+                    db.session.add(Expense(amount=amount, description=desc, user_id=manager.id))
+                db.session.commit()
+            except Exception as e:
+                print(f"Error seeding Vercel demo data: {e}")
+                db.session.rollback()
     
     # ============== DECORATORS ==============
     def login_required(f):
@@ -815,7 +881,11 @@ def create_app(config_name='development'):
     def chat_stream():
         """Non-blocking SSE stream for receiving chat notifications"""
         from flask import Response
+        is_serverless = bool(os.environ.get('VERCEL'))
         def stream():
+            if is_serverless:
+                yield "retry: 5000\n: keep-alive\n\n"
+                return
             messages = announcer.listen()
             try:
                 while True:
@@ -1192,6 +1262,8 @@ def create_app(config_name='development'):
 
     return app
 
+
+app = create_app('production' if os.environ.get('VERCEL') else 'development')
+
 if __name__ == '__main__':
-    app = create_app('development')
     app.run(debug=True, host='0.0.0.0', port=5900)
